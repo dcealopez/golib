@@ -1,6 +1,16 @@
 // Package slices provides generic higher-order functions over slices of values.
 package slices
 
+// Copy deeply copies a slice of elements that each, in turn, must be copied
+// using their own Copy method.
+func Copy[X interface{Copy() X}](xs []X) []X {
+    results := []X(nil)
+    for _, x := range xs {
+        results = append(results, x.Copy())
+    }
+    return results
+}
+
 // FromArgs returns the slice of the variadic arguments list.
 func FromArgs[X any](xs ... X) []X {
     return xs

@@ -45,14 +45,14 @@ func IsNegative[R real](r R) bool {
     return r <= 0
 }
 
-// IsStrictlyPositive returns true iff r > 0, but not if r == 0.
+// IsStrictlyPositive returns true iff r > 0.
 func IsStrictlyPositive[R real](r R) bool {
-    return (r > 0) && (r != 0)
+    return r > 0
 }
 
-// IsStrictlyNegative returns true iff r < 0, but not if r == 0.
+// IsStrictlyNegative returns true iff r < 0.
 func IsStrictlyNegative[R real](r R) bool {
-    return (r < 0) && (r != 0)
+    return r < 0
 }
 
 // Abs returns (0 - r) for r < 0, or r for r >= 0.

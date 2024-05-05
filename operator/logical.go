@@ -1,12 +1,14 @@
 package operator
 
-// True returns true if x represents a truthy value.
+// True returns true if x represents a truthy value. An input is considered
+// truthy iff it is not compare equal to the zero value for that type.
 //
-// An input is considered true iff it is not the zero value for that type.
+// Note that, for example, an empty string and a nil string both compare
+// equal in Go.
 //
-// This means that the boolean value true, non-zero numbers, and non-empty
-// strings are truthy, but the boolean value false, the number zero, and
-// the empty string are not.
+//    x True(x)
+//    T T
+//    F F
 func True[X comparable](x X) bool {
     var y X
     return x != y
@@ -45,7 +47,7 @@ func F[X comparable](p X, q X) bool {
 //    F T T
 //    F F T
 func T[X comparable](p X, q X) bool {
-    return false
+    return true
 }
 
 // P is a logical predicate. P(p, q) returns p, regardless of q.
@@ -162,7 +164,8 @@ func Iff[X comparable](p X, q X) bool {
 }
 
 // Implies is a logical predicate Implies(p, q) for "p implies q" (written
-// p => q). That is, if p is true then q must be true.
+// p => q). That is, if p is true then q must be true. If p is false, then
+// the statement is true regardless of q.
 //
 //    p q Implies(p, q)
 //    T T T
@@ -188,7 +191,7 @@ func NotImplies[X comparable](p X, q X) bool {
 
 // ConverseImplies is a logical predicate ConverseImplies(p, q) for "q implies
 // p" (written "q => p" or "p <= q"). That is, if q is true then p must be
-// true.
+// true. If q is false, then the statement is true regardless of p.
 //
 // This is also equivalent to a logical predicate "not p implies not q"
 // (written ¬p => ¬q). That is, if p is false then q must be false.

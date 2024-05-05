@@ -8,7 +8,8 @@
 // bound.
 //
 // Functions have the prefix "Left" if they bind the left-most argument first,
-// or "Right" if they bind the right-most argument first.
+// or "Right" if they bind the right-most argument first. The prefix "All"
+// binds all arguments at once.
 //
 // Each input function must return exactly one value. The "fun/result" and
 // "fun/maybe" packages provide useful functions that can wrap functions that

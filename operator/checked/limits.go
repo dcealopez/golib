@@ -7,14 +7,15 @@ import (
     "golang.org/x/exp/constraints"
 )
 
-// Limits provides a convenient way to fill the min and max arguments to the
-// checked operator functions. The inequality Min <= Max must be satisfied.
+// Limits are a pair of integer values defining a range between an (inclusive)
+// minimum value and an (inclusive) maximum value.
 type Limits[I constraints.Integer] struct {
     Min I
     Max I
 }
 
-// GetLimits returns a filled-in [Limit] for the given integer type.
+// GetLimits returns a filled-in [Limit] representing the widest possible
+// minimum and maximum values for a generic integer type.
 func GetLimits[I constraints.Integer]() Limits[I] {
     var n Limits[I]
     switch x := any(&n).(type) {
@@ -36,6 +37,10 @@ func GetLimits[I constraints.Integer]() Limits[I] {
 
 // Filled-in [Limits] about different integer types with minimum and maximum
 // set to the largest range supported by the limit.
+//
+// For signed integers, these are the appropriately sized math.MinInt and
+// math.MaxInt constants. For unsigned integers, these are zero and the
+// appropriately sized math.MaxUint constants.
 var (
     Int   = Limits[int]  {math.MinInt,   math.MaxInt}
     Int8  = Limits[int8] {math.MinInt8,  math.MaxInt8}
@@ -50,32 +55,35 @@ var (
     Uint64 = Limits[uint64]{0, math.MaxUint64}
 )
 
-// Add calls [checked.Add] with min and max filled in with the associated
-// [Limits] values.
+// Add returns (a + b, true) iff a, b, and the result all lie between the Limit
+// min and max inclusive, otherwise returns (0, false). This calculation is
+// robust in the event of integer overflow.
 func (l Limits[I]) Add(a I, b I) (I, bool) {
     return Add(l.Min, l.Max, a, b)
 }
 
-// Sub calls [checked.Sub] with min and max filled in with the associated
-// [Limits] values.
+// Sub returns (a - b, true) iff a, b, and the result all lie between the Limit
+// min and max inclusive, otherwise returns (0, false). This calculation is
+// robust in the event of integer overflow.
 func (l Limits[I]) Sub(a I, b I) (I, bool) {
     return Sub(l.Min, l.Max, a, b)
 }
 
-// Mul calls [checked.Mul] with min and max filled in with the associated
-// [Limits] values.
+// Mul returns (a * b, true) iff a, b, and the result all lie between the Limit
+// min and max inclusive, otherwise returns (0, false). This calculation is
+// robust in the event of integer overflow.
 func (l Limits[I]) Mul(a I, b I) (I, bool) {
     return Mul(l.Min, l.Max, a, b)
 }
 
-// Abs calls [checked.Abs] with min and max filled in with the associated
-// [Limits] values.
+// Abs returns (positive i, true) iff both i and the result lie between the
+// Limit min and max inclusive. Otherwise, returns (0, false).
 func (l Limits[I]) Abs(i I) (I, bool) {
     return Abs(l.Min, l.Max, i)
 }
 
-// Inv calls [checked.Inv] with min and max filled in with the associated
-// [Limits] values.
+// Inv returns (-i, true) iff both i and the result lie between the Limit min
+// and max inclusive. Otherwise, returns (0, false).
 func (l Limits[I]) Inv(i I) (I, bool) {
     return Inv(l.Min, l.Max, i)
 }

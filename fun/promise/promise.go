@@ -2,6 +2,10 @@
 // represent a computation to be performed at a later stage.
 //
 // This composes nicely with the idea of futures (see fun/future).
+//
+// Tip: rarely return a Promise from any function. Instead, return a normal
+// (result, error) tuple. The caller can use WrapResultFunc to transform that
+// function into one that returns a promise.
 package promise
 
 import (
@@ -30,13 +34,13 @@ type P[X any] interface {
     ComputeCtx(ctx context.Context) (X, error)
 }
 
-// Func is the type of a function with no arguments that satisfies the promise
+// pfunc is the type of a function with no arguments that satisfies the promise
 // interface by calling the function, ignoring any context.
-type Func[X any] func() (X, error)
-func (f Func[X]) Compute() (X, error) {
+type pfunc[X any] func() (X, error)
+func (f pfunc[X]) Compute() (X, error) {
     return f()
 }
-func (f Func[X]) ComputeCtx(ctx context.Context) (X, error) {
+func (f pfunc[X]) ComputeCtx(context.Context) (X, error) {
     return f()
 }
 
@@ -51,7 +55,7 @@ func FromFunc[T any](f func() T) P[T] {
 // FromResultFunc creates a promise to call function f, where f returns a
 // (result, error) tuple.
 func FromResultFunc[X any](f func() (X, error)) P[X] {
-    return Func[X](f)
+    return pfunc[X](f)
 }
 
 // WrapResultFunc wraps an existing function "f() => (X, error)" so that it
@@ -98,20 +102,20 @@ func WrapResultFunc4[A, B, C, D, X any](f func(A, B, C, D) (X, error)) func(A, B
 // (value, ok) tuple. If the returned ok is false, the promise computes the
 // error [NotOk].
 func FromOkFunc[X any](f func() (X, bool)) P[X] {
-    return Func[X](func() (result X, err error) {
+    return pfunc[X](func() (result X, err error) {
         v, ok := f()
         if !ok { err = NotOk; return }
         return v, nil
     })
 }
 
-// FuncCtx is the type of a function with a context argument that satisfies the
+// pfuncCtx is the type of a function with a context argument that satisfies the
 // promise interface by calling the function with a context.
-type FuncCtx[X any] func(ctx context.Context) (X, error)
-func (f FuncCtx[X]) Compute() (X, error) {
+type pfuncCtx[X any] func(ctx context.Context) (X, error)
+func (f pfuncCtx[X]) Compute() (X, error) {
     return f(context.TODO())
 }
-func (f FuncCtx[X]) ComputeCtx(ctx context.Context) (X, error) {
+func (f pfuncCtx[X]) ComputeCtx(ctx context.Context) (X, error) {
     return f(ctx)
 }
 
@@ -127,32 +131,34 @@ func FromFuncCtx[T any](f func(context.Context) T) P[T] {
 // FromResultFuncCtx creates a promise to call function f, where f accepts a
 // context and returns a (result, error) tuple.
 func FromResultFuncCtx[X any](f func(context.Context) (X, error)) P[X] {
-    return FuncCtx[X](f)
+    return pfuncCtx[X](f)
 }
 
 // FromOkFuncCtx creates a promise to call function f, where f accepts a
 // context and returns a (value, ok) tuple. If the returned ok is false, the
 // promise computes the error [NotOk].
 func FromOkFuncCtx[X any](f func(ctx context.Context) (X, bool)) P[X] {
-    return FuncCtx[X](func(ctx context.Context) (result X, err error) {
+    return pfuncCtx[X](func(ctx context.Context) (result X, err error) {
         v, ok := f(ctx)
         if !ok { err = NotOk; return }
         return v, nil
     })
 }
 
-type value[X any] struct {x X}
-func (v value[X]) Compute() (X, error) {
+// pvalue is the type of a single value that implements the promise interface
+// by always returning the value.
+type pvalue[X any] struct {x X}
+func (v pvalue[X]) Compute() (X, error) {
     return v.x, nil
 }
-func (v value[X]) ComputeCtx(ctx context.Context) (X, error) {
+func (v pvalue[X]) ComputeCtx(context.Context) (X, error) {
     return v.x, nil
 }
 
 // FromValue creates a promise that simply returns the provided argument and
 // a nil error when computed.
 func FromValue[X any](x X) P[X] {
-    return value[X]{x: x}
+    return pvalue[X]{x: x}
 }
 
 // FromValueErr creates a promise that simply returns the provided argument or,
@@ -165,12 +171,14 @@ func FromValueErr[X any](value X, err error) P[X] {
     }
 }
 
+// perror is the type of a single error that implements the promise interface
+// by always returning the error.
 type perror[X any] struct {err error}
 func (e perror[X]) Compute() (X, error) {
     var zero X
     return zero, e.err
 }
-func (e perror[X]) ComputeCtx(ctx context.Context) (X, error) {
+func (e perror[X]) ComputeCtx(context.Context) (X, error) {
     var zero X
     return zero, e.err
 }
@@ -182,7 +190,8 @@ func FromError[X any](err error) P[X] {
 }
 
 // Chain returns a new promise to compute function f on the result of promise
-// p.
+// p. If the input promise returns an error, the returned promise will return
+// that error without calling f.
 func Chain[X any, Y any](p P[X], f func(X) (Y, error)) P[Y] {
     return FromResultFuncCtx[Y](func(ctx context.Context) (Y, error) {
         v, err := p.ComputeCtx(ctx)
