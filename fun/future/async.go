@@ -19,11 +19,10 @@ func start[T any](ctx context.Context, promise promise.P[T], channel chan result
     value := result.New(promise.ComputeCtx(ctx))
     for {
         select {
-            case <- ctx.Done(): return
+            case <- ctx.Done(): close(channel); return
             default: channel <- value
         }
     }
-    close(channel)
 }
 
 // NewAsync creates a new future from a promise, and begins computing that

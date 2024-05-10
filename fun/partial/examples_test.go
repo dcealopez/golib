@@ -8,7 +8,7 @@ import (
     "github.com/tawesoft/golib/v2/fun/partial"
 )
 
-func Example_Line() {
+func Example_line() {
     // The formula for a line can be given by "y = mx + c", where m is the
     // gradient, and c is the offset where the line crosses the x-axis.
     line := func(x int, m int, c int) int { // solves for y
@@ -40,7 +40,7 @@ func Example_Line() {
     // 11
 }
 
-func Example_Maybe() {
+func Example_maybe() {
     // divides two numbers, while checking for divide by zero.
     divide := func(x int, y int) (value int, ok bool) {
         if y == 0 { return 0, false }
@@ -74,7 +74,7 @@ func Example_Maybe() {
     // divideByZero(10) = 0, false
 }
 
-func Example_All() {
+func Example_all() {
     // Pythagoras theorem for calculating the hypotenuse of a triangle:
     // a squared + b squared = c squared.
     hyp := func(a float64, b float64) float64 {

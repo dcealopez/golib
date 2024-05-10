@@ -14,7 +14,7 @@ guarantees. Instead, they have the guarantees described in the following table.
 
 |      Stability      | Meaning                                                                                                                          |
 |:-------------------:|----------------------------------------------------------------------------------------------------------------------------------|
-|       Stable        | There will be no breaking changes to this package, except between major versions.                                                |
+|       Stable        | There will be no breaking changes to this package within the same major version (e.g. only between v2 and v3).                   |
 |       Latest        | Small breaking changes to this package are possible, even between minor versions. They will usually have migration instructions. |
 | Latest *(unstable)* | Large breaking changes to this package are likely, even between minor versions, and may not have migration instructions.         |
 
@@ -24,6 +24,11 @@ minor version changes.
 
 ## Updating `github.com/tawesoft/golib`
 
+### Migrating v2.8 → v2.10
+
+* `iter.Check` has dropped its first return value.
+* package `digraph` has moved into the `ds` subdirectory.
+
 ### Migrating v2.0 → v2.8
 
 Fewer breaking changes are expected after this point.
@@ -31,6 +36,7 @@ Fewer breaking changes are expected after this point.
 * `meta` packages have been moved to `html/meta`
 * `fun/maybe`, `fun/result`, and `view` packages have been redone
 * `numbers` package removed with much implemented by the new `operator` package
+  instead
 * `operator/checked/integer` is now just `operator/checked`.
 * some functions removed from `fun/result`, `iter`, `ks` packages
 * some functions moved from `ks` to `operator`

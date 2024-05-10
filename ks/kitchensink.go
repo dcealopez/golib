@@ -3,12 +3,38 @@
 package ks
 
 import (
+    "encoding/binary"
     "errors"
+    "hash/crc64"
     "strings"
     "unicode/utf8"
 
     "golang.org/x/exp/utf8string"
 )
+
+var ErrTODO = errors.New("TODO")
+
+var crc64table = crc64.MakeTable(crc64.ECMA)
+
+func Checksum64(crc uint64, value uint64) uint64 {
+    var buf [8]byte
+    binary.LittleEndian.PutUint64(buf[0:8], value)
+    return crc64.Update(crc, crc64table, buf[0:8])
+}
+
+// LiftErrorFunc takes any 1-arity function "f(x) => error", and
+// returns a new function that takes an additional error input. If that error
+// is not nil, it is returned immediately before calling f. Otherwise, the
+// result of calling f(x) normally is returned.
+//
+// This allows multiple simple error-returning functions to be called in
+// sequence, with only one error check at the end.
+func LiftErrorFunc[X any](f func(x X) error) func(err error, x X) error {
+    return func(err error, x X) error {
+        if err != nil { return err }
+        return f(x)
+    }
+}
 
 // FilterError returns err, unless errors.Is(err, i) returns true for any
 // i in ignore, in which case it returns nil.

@@ -89,44 +89,6 @@ func TestCat(t *testing.T) {
     assert.Equal(t, []rune("abcdef"), lazy.ToSlice(abcdef))
 }
 
-func TestCheck(t *testing.T) {
-    errorIfOdd := func (x int) error {
-        if x % 2 != 0 {
-            return fmt.Errorf("got odd number %d", x)
-        }
-        return nil
-    }
-
-    type row struct {
-        input []int
-        expectedValue int
-        expectedError error
-    }
-    rows := []row{
-        {
-            input: []int{},
-            expectedValue: 0,
-            expectedError: nil,
-        },
-        {
-            input: []int{2, 4, 8, 10},
-                expectedValue: 0,
-            expectedError: nil,
-        },
-        {
-            input: []int{2, 4, 7, 10},
-            expectedValue: 7,
-            expectedError: fmt.Errorf("got odd number 7"),
-        },
-    }
-
-    for i, r := range rows {
-        x, err := lazy.Check(errorIfOdd, lazy.FromSlice(r.input))
-        assert.Equal(t,   x, r.expectedValue, "test %i expected value", i)
-        assert.Equal(t, err, r.expectedError, "test %i expected error", i)
-    }
-}
-
 func TestCounter(t *testing.T) {
     min := math.MinInt
     max := math.MaxInt

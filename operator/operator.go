@@ -2,11 +2,11 @@
 // (equals) or "+" (addition), as functions that can be passed to higher order
 // functions.
 //
-// See also the [github.com/tawesoft/golib/v2/operator/checked/integer] package
-// which implements operators that are robust against integer overflow.
+// The `operator/checked` subpackage implements operators that are robust
+// against integer overflow.
 //
-// See also the [github.com/tawesoft/golib/v2/operator/reflect] package
-// which implements operators that require reflection.
+// The `operator/reflect` subpackage implements operators that require
+// reflection.
 package operator
 
 import (
@@ -20,6 +20,9 @@ func Zero[T any]() T {
 }
 
 // Ternary returns a if q is true, or b if q is false.
+//
+// Note that this does not short-circuit, so both arguments are evaluated
+// as inputs to this function.
 func Ternary[X any](q bool, a X, b X) X {
     if q { return a } else { return b }
 }

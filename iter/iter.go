@@ -127,22 +127,20 @@ func Cat[X any](its ... It[X]) It[X] {
 }
 
 // Check calls function f for each value produced by an iterator. It halts when
-// a non-nil error is returned by f, and immediately returns the value being
-// examined at the time and the error. Otherwise, returns a zero value and a
-// nil error.
+// a non-nil error is returned by f, and immediately returns the error.
+// Otherwise, returns a nil error.
 //
 // See also [Walk], which is similar but does not check for errors.
 func Check[X any](
     f func(X) error,
     it It[X],
-) (X, error) {
-    zero := operator.Zero[X]()
+) error {
     for {
         x, ok := it()
         if !ok { break }
-        if err := f(x); err != nil { return x, err }
+        if err := f(x); err != nil { return err }
     }
-    return zero, nil
+    return nil
 }
 
 // Count calls function f for each value x produced by an iterator. It returns
