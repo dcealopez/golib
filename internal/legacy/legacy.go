@@ -122,7 +122,7 @@ func WithCloser[T io.Closer](opener func() (T, error), do func(v T) error) error
     f, err := opener()
     if err != nil { return fmt.Errorf("WithCloser[%T] open error: %w", zero, err) }
 
-    doer := must.CatchFunc(func() error { return do(f) })
+    doer := must.Try(func() error { return do(f) })
     err, panicErr := doer()
     if err != nil {
         err = fmt.Errorf("WithCloser[%T] error: %w", zero, err)

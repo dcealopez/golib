@@ -29,41 +29,41 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 
 ### General Packages
 
-| Name                    |  Stable   |  Latest   | Description                                         |
-|:------------------------|:---------:|:---------:|:----------------------------------------------------|
-| `css/tokenizer`         |     -     | [v2][c01] | CSS tokenizer for [CSS Syntax Module Level 3][css1] |
-| `dialog`                | [v2][d01] |     -     | cross-platform message boxes & file pickers         |
-| `iter`                  | [v2][i01] |     -     | composable lazy iteration                           |
-| `ks`                    |     -     | [v2][k01] | *(unstable)* "kitchen sink" of extras               |
-| `html/meta/opengraph`   | [v2][h01] |     -     | HTML meta tags for Facebook's Open Graph protocol   |
-| `html/meta/twittercard` | [v2][h02] |     -     | HTML meta tags for Twitter Cards                    |
-| `must`                  | [v2][m03] |     -     | assertions                                          |
-| `operator`              | [v2][o01] |     -     | operators as functions                              |
-| `tuple`                 | [v2][p01] |     -     | convert to/from tuples                              |
-| `view`                  | [v2][v01] |     -     | dynamic views over collections                      |
+| Name                    |  Stable   |   Latest    | Description                                         |
+|:------------------------|:---------:|:-----------:|:----------------------------------------------------|
+| `css/tokenizer`         |     -     |  [v2][c01]  | CSS tokenizer for [CSS Syntax Module Level 3][css1] |
+| `dialog`                | [v2][d01] |      -      | cross-platform message boxes & file pickers         |
+| `iter`                  |     -     |  [v2][i01]  | composable lazy iteration                           |
+| `ks`                    |     -     |  [v2][k01]  | *(unstable)* "kitchen sink" of extras               |
+| `html/meta/opengraph`   | [v2][h01] |      -      | HTML meta tags for Facebook's Open Graph protocol   |
+| `html/meta/twittercard` | [v2][h02] |      -      | HTML meta tags for Twitter Cards                    |
+| `must`                  | [v2][m03] |      -      | assertions                                          |
+| `operator`              | [v2][o01] |      -      | operators as functions                              |
+| `tuple`                 | [v2][p01] |      -      | convert to/from tuples                              |
+| `view`                  | [v2][v01] |      -      | dynamic views over collections                      |
 
 
 ### Data-Structures
 
-| Name      |  Stable   |  Latest   | Description                                   |
-|:----------|:---------:|:---------:|:----------------------------------------------|
-| `bitseq`  | [v2][b01] |     -     | compact sequence of bits                      |
-| `digraph` |     -     | [v2][d02] | *(unstable)* directed graphs (including DAGs) |
-| `garry`   |     -     | [v2][g01] | generational array indices                    |
+| Name      | Stable |  Latest   | Description                                   |
+|:----------|:------:|:---------:|:----------------------------------------------|
+| `bitseq`  |   -    | [v2][b01] | compact "infinite" sequence of bits           |
+| `digraph` |   -    | [v2][d02] | *(unstable)* directed graphs (including DAGs) |
+| `garry`   |   -    | [v2][g01] | generational array indices                    |
 
 
 
 ### Functional-style Packages
 
-| Name          |  Stable   | Latest | Description                                |
-|:--------------|:---------:|:------:|:-------------------------------------------|
-| `fun/either`  | [v2][f01] |   -    | "Either" type                              |
-| `fun/future`  | [v2][f02] |   -    | synchronous and asynchronous future values |
-| `fun/maybe`   | [v2][f03] |   -    | "Maybe" type                               |
-| `fun/partial` | [v2][f04] |   -    | partial function application               |
-| `fun/promise` | [v2][f05] |   -    | store computations to be performed later   |
-| `fun/result`  | [v2][f06] |   -    | "Result" type                              |
-| `fun/slices`  | [v2][f07] |   -    | higher-order functions for slices          |
+| Name          |  Stable   |  Latest   | Description                                |
+|:--------------|:---------:|:---------:|:-------------------------------------------|
+| `fun/either`  | [v2][f01] |     -     | "Either" type                              |
+| `fun/future`  |           | [v2][f02] | synchronous and asynchronous future values |
+| `fun/maybe`   | [v2][f03] |     -     | "Maybe" type                               |
+| `fun/partial` | [v2][f04] |     -     | partial function application               |
+| `fun/promise` |     -     | [v2][f05] | store computations to be performed later   |
+| `fun/result`  | [v2][f06] |     -     | "Result" type                              |
+| `fun/slices`  | [v2][f07] |     -     | higher-order functions for slices          |
 
 ### Text & Unicode Packages
 

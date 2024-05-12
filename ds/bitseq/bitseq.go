@@ -1,11 +1,10 @@
-// Package bitseq efficiently implements a general-purpose and variable-length
-// sequence of bits.
+// Package bitseq efficiently implements a general-purpose infinite sequence of
+// bits.
 package bitseq
 
 import (
     "encoding/binary"
     "errors"
-    "fmt"
     "io"
     "math/bits"
     "slices"
@@ -16,79 +15,57 @@ import (
 
 var ErrRange = errors.New("value out of range")
 
-// Store is a variable-length container of bits.
+// Store is an "infinite" sequence of bits. Trailing zero bits do not
+// necessarily consume any memory.
 //
-// The zero-value is a useful value. The store is not suitable for concurrent
-// use without additional synchronization.
+// The zero-value Store is a useful value. The store is not suitable for
+// concurrent use without additional synchronization.
 type Store struct {
-    // length records the logical number of bits stored.
-    //
-    // Note: This may be less than or greater than the number
-    // of bits actually physically available in buckets.
-    length int
-
     // buckets is the sequence of bits packed into a slice of uint64 values.
     // Trailing zero bits are not necessarily backed by a real bucket.
     buckets []uint64
 }
 
 // String implements the stringer interface, and prints a bit sequence as '1'
-// and '0' characters from left-to-right.
+// and '0' characters from left-to-right. Trailing zeroes are omitted.
 func (s *Store) String() string {
     var buf strings.Builder
-    var n = 0
+    var trailingZeros = 0
+
     for _, bucket := range s.buckets {
         for i := 0; i < 64; i++ {
             q := (bucket & (1 << i)) != 0
             if q {
+                // delay writing zeroes until a true bit proves that they are
+                // not trailing zeroes.
+                for j := 0; j < trailingZeros; j++ {
+                    buf.WriteByte('0')
+                }
+                trailingZeros = 0
                 buf.WriteByte('1')
             } else {
-                buf.WriteByte('0')
+                trailingZeros++
             }
-            n++
-            if n >= s.length { break }
         }
-        if n >= s.length { break }
     }
-    // trailing zeros not backed by buckets
-    for i := n; i < s.length; i++ {
-        buf.WriteByte('0')
-    }
-    return fmt.Sprintf("<Store length=%d, bits=%s>", s.length, buf.String())
+    return buf.String()
 }
 
-// Resize resizes the length of the sequence of bits. If growing, trailing
-// bits are set to zero. If shrinking, may be able to free some of the surplus
-// backing memory.
-func (s *Store) Resize(length int) {
-    if length == s.length {
-        return
-    } else if length > s.length {
-        s.Set(length - 1, false)
-    } else {
-        cropped := s.croppedBuckets()
-        if len(cropped) != cap(s.buckets) {
-            s.buckets = make([]uint64, len(cropped))
-        }
-        copy(s.buckets, cropped)
-        s.buckets = s.buckets[:cap(s.buckets)]
-
-        // clear trailing data in last bucket
-        last := length / 64
-        if last > 0 {
-            offset := 64 - (length % 64)
-
-            for i := offset; i < 64; i++ {
-                s.buckets[last] = s.buckets[last] & (^(1 << offset))
-            }
-        }
-
-        s.length = length
+// Crop attempts to reclaim any surplus backing memory consumed by trailing
+// zero bits.
+func (s *Store) Crop() {
+    cropped := s.croppedBuckets()
+    if len(cropped) != cap(s.buckets) {
+        s.buckets = make([]uint64, len(cropped))
+    }
+    copy(s.buckets, cropped)
+    for i := len(cropped); i < cap(s.buckets); i++ {
+        s.buckets[i] = 0
     }
 }
 
-// croppedBuckets returns a subslice of buckets that excludes any buckets that
-// are solely trailing zeros.
+// croppedBuckets returns a subslice of buckets. The subslice excludes any
+// buckets that are solely trailing zeros.
 func (s *Store) croppedBuckets() []uint64 {
     if s.buckets == nil { return nil }
 
@@ -126,7 +103,7 @@ func(s *Store) Write(w io.Writer) error {
     })
 
     buckets := s.croppedBuckets()
-    stats := (uint64(s.Length()) << 32) + (uint64(len(buckets) << 0))
+    stats := uint64(len(buckets))
     err = write(err, magic)
     err = write(err, stats)
     for _, c := range buckets {
@@ -142,34 +119,10 @@ func(s *Store) Write(w io.Writer) error {
 // Important: While relatively robust against corrupt data, care should be
 // taken when parsing arbitrary input. A malicious actor could craft an input
 // that would allocate a large amount of memory, or attempt to extract
-// information by continuing to consume from the reader.
+// information by continuing to consume from the reader. [io.LimitReader] may
+// be helpful here.
 func Read(dest *Store, r io.Reader) error {
-    return ks.ErrTODO
-}
-
-// Length returns the number of bits stored.
-func (s *Store) Length() int {
-    // Note: This may be less than or greater than the number
-    // of bits actually physically available in buckets.
-    return s.length
-}
-
-// Push stores a true or false bit at the end of the sequence.
-func (s *Store) Push(bit bool) {
-    s.Set(s.length, bit)
-}
-
-// Pop returns and removes the bit at the end of the sequence.
-func (s *Store) Pop() bool {
-    result := s.Get(s.length - 1)
-    s.Set(s.length - 1, false) // zero unused memory
-    s.length--
-    return result
-}
-
-// Peek returns the bit at the end of the sequence.
-func (s *Store) Peek() bool {
-    return s.Get(s.length - 1)
+    return ks.ErrTODO // TODO
 }
 
 func fromIndex(index int) (bucket int, offset int) {
@@ -178,18 +131,19 @@ func fromIndex(index int) (bucket int, offset int) {
     return
 }
 
-// Set sets a bit to true or false at given index, growing the capacity of
-// the backing array as necessary if the index exceeds its current size.
-// Intermediate values are automatically initialised with false bits.
+// Set sets a bit to true or false at given index.
 func (s *Store) Set(index int, bit bool) {
+    // Grows the capacity of the backing array as necessary if the index
+    // exceeds its current size. Intermediate values are automatically
+    // initialised with false bits.
+
     if index < 0 { panic(ErrRange) }
-    if index >= s.length { s.length = index + 1 }
 
     bucket, offset := fromIndex(index)
     if bucket >= cap(s.buckets) {
         if !bit { return } // trailing zeros are implied
-        s.buckets = slices.Grow(s.buckets, 1 + bucket - len(s.buckets))
-        s.buckets = s.buckets[:cap(s.buckets)]
+        s.buckets = slices.Grow(s.buckets, 1 + bucket - cap(s.buckets))
+        s.buckets = s.buckets[0:cap(s.buckets)]
     }
     if bit {
         s.buckets[bucket] = s.buckets[bucket] | (1 << offset)
@@ -199,9 +153,9 @@ func (s *Store) Set(index int, bit bool) {
 }
 
 // Get looks up a bit at a given index, returning true iff it has been set.
-// Panics if index is out of range.
+// Panics if index is less than zero.
 func (s *Store) Get(index int) bool {
-    if (index < 0) || (index >= s.length) { panic(ErrRange) }
+    if (index < 0) { panic(ErrRange) }
     return s.getFromBucket(fromIndex(index))
 }
 
@@ -214,10 +168,8 @@ func (s *Store) getFromBucket(bucket, offset int) bool {
 }
 
 // NextFalse returns the index of the next false bit found after the given
-// index. To start at the beginning, start with NextFalse(-1). If the second
-// return value is false, then the search has got to the end of the sequence
-// without finding any false bits.
-func (s *Store) NextFalse(after int) (int, bool) {
+// index. To start at the beginning, start with NextFalse(-1).
+func (s *Store) NextFalse(after int) int {
     buckets := len(s.buckets)
     start := after + 1
     bucket := start / 64
@@ -236,18 +188,17 @@ func (s *Store) NextFalse(after int) (int, bool) {
 
         for j := offset; j < 64; j++ {
             index := (i * 64) + j
-            if index >= s.length { return -1, false }
-            if !s.getFromBucket(i, j) { return index, true }
+            if !s.getFromBucket(i, j) { return index }
         }
     }
 
-    return -1, false
+    return start
 }
 
 // NextTrue returns the index of the next true bit found after the given
 // index. To start at the beginning, start with NextTrue(-1). If the second
-// return value is false, then the search has got to the end of the sequence
-// without finding any true bits.
+// return value is false, then the search has finished, and the remaining
+// sequence is an infinite sequence of false bits.
 func (s *Store) NextTrue(after int) (int, bool) {
     buckets := len(s.buckets)
     start := after + 1
@@ -270,7 +221,6 @@ func (s *Store) NextTrue(after int) (int, bool) {
 
         for j := offset; j < limit; j++ {
             index := (i * 64) + j
-            if index >= s.length { return -1, false }
             if s.getFromBucket(i, j) { return index, true }
         }
     }

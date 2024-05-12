@@ -24,7 +24,13 @@ minor version changes.
 
 ## Updating `github.com/tawesoft/golib`
 
-### Migrating v2.8 → v2.10
+### Migrating v2.11 → v2.12
+
+* `ds/bitseq.Store` no longer has a concept of a logical length.
+* `must` package functions now have dedicated formatting variants ending in "f".
+  This should not affect much existing usage of the `must` package.
+
+### Migrating v2.8 → v2.11
 
 * `iter.Check` has dropped its first return value.
 * package `digraph` has moved into the `ds` subdirectory.

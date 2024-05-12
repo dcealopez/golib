@@ -45,7 +45,7 @@ func Test_consumeDirect(t *testing.T) {
         },
     }
     for _, test := range rows {
-        f, ok := fns[test.fn]; must.True(ok, "no function %q", test.fn)
+        f, ok := fns[test.fn]; must.Truef(ok, "no function %q", test.fn)
         got, offset := f(test.input, test.startOffset)
         gotValue := test.input[got.Content[0]:got.Content[1]]
 

@@ -31,7 +31,7 @@ func position1(start runeio.Offset) token.Position {
 // position returns a [token.Position] from a (start, end) offset pair.
 func position(start runeio.Offset, end runeio.Offset) token.Position {
     if end.Byte < start.Byte {
-        must.Never("token end before token start")
+        must.Neverf("token end before token start")
     }
     return token.Position{
         Byte: start.Byte,

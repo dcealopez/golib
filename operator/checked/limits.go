@@ -30,7 +30,7 @@ func GetLimits[I constraints.Integer]() Limits[I] {
         case *Limits[uint32]: *x = Uint32
         case *Limits[uint64]: *x = Uint64
         default:
-            must.Never("Limits are not defined for type %T", n)
+            must.Neverf("Limits are not defined for type %T", n)
     }
     return n
 }

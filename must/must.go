@@ -5,88 +5,134 @@ import (
     "fmt"
 )
 
+func typeName(x any) string {
+    // while reflect.TypeOf(x).String() is more efficient, the reflect package
+    // is less portable.
+    return fmt.Sprintf("%T", x)
+}
+
 // Result accepts a (value, err) tuple as input and panics if err != nil,
-// otherwise returns value. The error raised by panic is wrapped in another
-// error.
+// otherwise returns value. The non-nil input error is wrapped in [ResultError]
+// before panicking.
 //
 // For example, must.Result(os.Open("doesnotexist")) may panic with an error
-// like "unexpected error in must.Result[*os.File]: open doesnotexist: no such
-// file or directory". On success, returns *os.File.
+// such as "error in must.Result[*os.File]: open doesnotexist: no such file or
+// directory", or, on success, return *os.File.
 func Result[T any](t T, err error) T {
     if err != nil {
-        panic(fmt.Errorf("error in must.Result[%T]: got error: %w", t, err))
+        panic(ResultError[T]{nil, err})
+    }
+    return t
+}
+
+// Resultf accepts a (value, err) tuple, and a [fmt.Sprintf] -style format
+// string with optional arguments, as input and panics if err != nil. Otherwise,
+// returns value. The original non-nil input error, and the formatted error
+// message, are joined (see [errors.Join] and wrapped in [ResultError] before
+// panicking.
+func Resultf[T any](t T, err error, format string, args ... any) T {
+    if err != nil {
+        panic(ResultError[T]{fmt.Errorf(format, args...), err})
     }
     return t
 }
 
 // Ok accepts a (value, ok) tuple as input and panics if ok is false, otherwise
 // returns value.
-//
-// The args parameter defines an optional fmt.Sprintf-style format string and
-// arguments. If specified, the first argument must be a string.
-func Ok[T any](t T, ok bool, args ... interface{}) T {
+func Ok[T any](t T, ok bool) T {
     if ok { return t }
-    panic(errorf(fmt.Sprintf("error in must.Ok[%T]: not ok", t), args...))
+    panic(OkError[T]{})
 }
 
-// Equal panics if the provided comparable values are not equal.
-//
-// Otherwise, returns true.
-//
-// The args parameter defines an optional fmt.Sprintf-style format string and
-// arguments. If specified, the first argument must be a string.
-func Equal[T comparable](a T, b T, args ... interface{}) bool {
+// Okf accepts a (value, ok) tuple, and a [fmt.Sprintf] -style format string
+// with optional arguments, as input and panics if ok is false. Otherwise,
+// returns value. The formatted error message is wrapped in [OkError] before
+// panicking.
+func Okf[T any](t T, ok bool, format string, args ... any) T {
+    if ok { return t }
+    panic(OkError[T]{fmt.Errorf(format, args...)})
+}
+
+// Equal panics if the provided comparable values are not equal. Otherwise,
+// returns true.
+func Equal[T comparable](a T, b T) bool {
     if a == b { return true }
-    panic(errorf(fmt.Sprintf("error in must.Equal[%T]: %v != %v", a, b, a), args...))
+    panic(newCompareError[T]("==", a, b, nil))
 }
 
-// True panics if the provided boolean is not true.
+// Equalf panics if the provided comparable values are not equal. Otherwise,
+// returns true.
 //
-// Otherwise, it passes the input value back unchanged.
-//
-// The args parameter defines an optional fmt.Sprintf-style format string and
-// arguments. If specified, the first argument must be a string.
-func True(q bool, args ... interface{}) bool {
-    if q { return q }
-    panic(errorf("error in must.True: not true", args...))
+// The [fmt.Sprintf] -style format string and with optional arguments are used
+// to format the error message. The formatted error message is wrapped in
+// [CompareError] before panicking.
+func Equalf[T comparable](a T, b T, format string, args ... any) bool {
+    if a == b { return true }
+    err := fmt.Errorf(format, args...)
+    panic(newCompareError[T]("==", a, b, err))
 }
 
-// Not panics if the provided boolean is not false.
-//
-// Otherwise, it passes the input value back unchanged.
-//
-// The args parameter defines an optional fmt.Sprintf-style format string and
-// arguments. If specified, the first argument must be a string.
+// True is the equivalent of Equal with a true value.
+func True(q bool) bool {
+    return Equal(q, true)
+}
+
+// Truef is the equivalent of Equalf with a true value.
+func Truef(q bool, format string, args ... any) bool {
+    return Equalf(q, true, format, args...)
+}
+
+// Not is the equivalent of Equal with a false value.
 func Not(q bool, args ... interface{}) bool {
-    if !q { return q }
-    panic(errorf("error in must.False: not false", args...))
+    return Equal(q, false)
+}
+
+// Notf is the equivalent of Equalf with a false value.
+func Notf(q bool, format string, args ... any) bool {
+    return Equalf(q, false, format, args...)
 }
 
 // Check panics if the error is not nil. Otherwise, it returns a nil error (so
-// that it is convenient to chain).
+// that it is convenient to chain). The raised non-nil error is wrapped
+// in a [CheckError] before panicking.
 func Check(err error) error {
     if err == nil { return nil }
-    panic(fmt.Errorf("must.Check: unexpected error: %w", err))
+    panic(CheckError{nil, err})
 }
 
-// CheckAll panics at the first non-nil error.
+// Checkf panics if the error is not nil. Otherwise, it always returns a nil
+// error (so that it is convenient to chain).
+//
+// The [fmt.Sprintf] -style format string and with optional arguments are used
+// to format the error message raised in the panic. The original non-nil input
+// error, and the formatted error message, are joined (see [errors.Join] and
+// wrapped in [CheckError] before panicking.
+func Checkf(err error, format string, args ... any) error {
+    if err == nil { return nil }
+    panic(CheckError{fmt.Errorf(format, args...), err})
+}
+
+// CheckAll panics at the first non-nil error. The raised non-nil error is
+// wrapped in a [CheckError] before panicking.
 func CheckAll(errs ... error) {
     for _, err := range errs {
-        if err == nil { continue }
-        panic(fmt.Errorf("must.CheckAll: unexpected error: %w", err))
+        Check(err)
     }
 }
 
-// CatchFunc takes a function f() => x that may panic, and instead returns a
+// Try takes a function f() => x that may panic, and instead returns a
 // function f() => (x, error).
-func CatchFunc[X any](f func() X) func() (x X, err error) {
+//
+// If the raised panic is of type error, it is returned directly. Otherwise,
+// it is wrapped in a [ValueError].
+func Try[X any](f func() X) func() (x X, err error) {
     return func() (x X, err error) {
         defer func() {
             if r := recover(); r != nil {
                 if rErr, ok := r.(error); ok {
-                    err = fmt.Errorf("must.CatchFunc[%T]: caught panic: %w", x, rErr)
+                    err = rErr
                 } else {
-                    err = fmt.Errorf("must.CatchFunc[%T]: caught panic: %v", x, r)
+                    err = ValueError[X]{r}
                 }
             }
         }()
@@ -97,6 +143,8 @@ func CatchFunc[X any](f func() X) func() (x X, err error) {
 
 // Func takes a function f() => (x, error), and returns a function f() => x
 // that may panic in the event of error.
+//
+// Any raised error is wrapped in [ResultError].
 func Func[X any](
     f func () (X, error),
 ) func () X {
@@ -107,16 +155,15 @@ func Func[X any](
 
 // Never signifies code that should never be reached. It raises a panic when
 // called.
-//
-// The args parameter defines an optional fmt.Sprintf-style format string and
-// arguments. If specified, the first argument must be a string.
-func Never(args ... interface{}) {
-    panic(errorf("must.Never: this should never happen", args...))
+func Never() {
+    panic(NeverError{})
 }
 
-func errorf(format string, args ... interface{}) error {
-    if len(args) > 0 {
-        return fmt.Errorf(format + ": " + args[0].(string), args[1:]...)
-    }
-    return fmt.Errorf(format)
+// Neverf signifies code that should never be reached. It raises a panic when
+// called.
+//
+// The args parameter defines an optional fmt.Sprintf-style format string and
+// arguments.
+func Neverf(format string, args ... any) {
+    panic(NeverError{fmt.Errorf(format, args...)})
 }

@@ -17,7 +17,7 @@ func TestCatchFunc(t *testing.T) {
             return "something"
         }
 
-        x, err := must.CatchFunc[string](failingFunctionWithString)()
+        x, err := must.Try[string](failingFunctionWithString)()
         assert.Equal(t, "", x)
         assert.Error(t, err)
         assert.Equal(t, nil, errors.Unwrap(err))
@@ -29,12 +29,10 @@ func TestCatchFunc(t *testing.T) {
             return "something"
         }
 
-        x, err := must.CatchFunc[string](failingFunctionWithError)()
+        x, err := must.Try[string](failingFunctionWithError)()
         assert.Equal(t, "", x)
         assert.Error(t, err)
-        wrapped := errors.Unwrap(err)
-        assert.Error(t, wrapped)
-        assert.Equal(t, "oops", wrapped.Error())
+        assert.Equal(t, "oops", err.Error())
     }
 }
 

@@ -145,7 +145,7 @@ func MakeNumberSymbols(basedir string, destdir string) {
     sort.Strings(sortedSeen)
     offset := 0
     for _, s := range sortedSeen {
-        must.True(len(s) + offset <= math.MaxUint16, "offset out of range")
+        must.Truef(len(s) + offset <= math.MaxUint16, "offset out of range")
         seen[s] = Slice{uint16(offset), uint16(offset + len(s))}
         offset += len(s)
     }
@@ -168,7 +168,7 @@ func MakeNumberSymbols(basedir string, destdir string) {
                 strings.ToLower(symbols.NumberSystem))
 
             if _, exists := keyedIndexes[key]; exists {
-                must.Never("duplicate key %q", key)
+                must.Neverf("duplicate key %q", key)
             }
 
             s := Symbols{

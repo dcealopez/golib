@@ -28,7 +28,7 @@ func mirror(x token.Token) token.Token {
         case x.Is(token.TypeLeftCurlyBracket):  return token.RightCurlyBracket()
         case x.Is(token.TypeLeftSquareBracket): return token.RightSquareBracket()
     }
-    must.Never("invalid mirror")
+    must.Neverf("invalid mirror")
     return token.Token{}
 }
 
