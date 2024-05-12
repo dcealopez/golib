@@ -8,5 +8,3 @@
 *.out
 /_*
 ._*
-/ds/genarray/genarray.go
-/ds/genarray/genarray_test.go
