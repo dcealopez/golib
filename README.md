@@ -3,7 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/tawesoft/golib/v2.svg)](https://pkg.go.dev/github.com/tawesoft/golib/v2)
 [![Coverage Status](https://coveralls.io/repos/github/tawesoft/golib/badge.svg?branch=v2)](https://coveralls.io/github/tawesoft/golib?branch=v2)
 
-A monorepo for small Go (v1.20+) modules maintained by
+A monorepo for small Go (v1.21+) modules maintained by
 [Tawesoft®](https://www.tawesoft.co.uk), with few dependencies.
 
 ```go

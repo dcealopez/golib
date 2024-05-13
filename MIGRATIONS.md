@@ -29,6 +29,8 @@ minor version changes.
 * `ds/bitseq.Store` no longer has a concept of a logical length.
 * `must` package functions now have dedicated formatting variants ending in "f".
   This should not affect much existing usage of the `must` package.
+* Support for go v1.20 is dropped; please move to at least v1.21 inline with
+  the official [Go release policy](https://go.dev/doc/devel/release#policy)
 
 ### Migrating v2.8 → v2.11
 
