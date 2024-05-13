@@ -1,6 +1,7 @@
 package bitseq_test
 
 import (
+    "math"
     "testing"
 
     "github.com/tawesoft/golib/v2/ds/bitseq"
@@ -19,12 +20,29 @@ func TestStore_String(t *testing.T) {
         value    bool
         expected string
     }{
-        /* 0 */ {  5, F, ""},
-        /* 1 */ {  2, T, "001"},
-        /* 2 */ {  2, F, ""},
-        /* 3 */ {  3, T, "0001"},
-        /* 4 */ {  1, T, "0101"},
-        /* 5 */ {  8, T, "010100001"},
+        /*  0 */ {  5, F, ""},
+        /*  1 */ {  2, T, "001"},
+
+        // unset
+        /*  2 */ {  2, F, ""},
+
+        // set then set again earlier in sequence
+        /*  3 */ {  3, T, "0001"},
+        /*  4 */ {  1, T, "0101"},
+
+        // redundant unset
+        /*  5 */ {  2, F, "0101"},
+
+        // double set
+        /*  6 */ {  8, T, "010100001"},
+        /*  7 */ {  8, T, "010100001"},
+
+        // set and unset past 64-bit boundary
+        /*  8 */ { 65, T, "010100001000000000000000000000000000000000000000000000000000000001"},
+        /*  9 */ { 65, F, "010100001"},
+
+        // Trailing zeros don't allocate so this is fine
+        /* 10 */ { math.MaxInt, F, "010100001"},
     }
 
     for i, arg := range args {

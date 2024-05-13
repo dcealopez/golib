@@ -8,8 +8,8 @@
 // Each array slot supports a 64-bit generation count. In rare cases this
 // may eventually overflow, raising a panic with [ErrRange] on insertion.
 //
-// Security model: note that key lookups are not constant-time, and may be
-// leaked through timing side-channel attacks. Do not treat keys as secret
+// Security model: note that keys are predictable and keys may be leaked
+// through timing side-channel attacks. Do not treat these keys as secret
 // values.
 package genarray
 
@@ -22,22 +22,21 @@ import (
 
     "github.com/tawesoft/golib/v2/ds/bitseq"
     "github.com/tawesoft/golib/v2/iter"
-    "github.com/tawesoft/golib/v2/ks"
     "github.com/tawesoft/golib/v2/must"
     "github.com/tawesoft/golib/v2/operator"
 )
 
 var ErrNotFound = errors.New("not found")
 var ErrRange    = errors.New("value out of range")
-var ErrConflict = errors.New("key conflict")
 var ErrLimit    = errors.New("index exceeds limit")
+var ErrConflict = errors.New("key conflict")
 
 // A Key uniquely references a value in a Store.
-type Key struct { maskedIndex, maskedGeneration uint64 }
+type Key struct { index, generation uint64 }
 
-// Write encodes a key as an opaque 16-byte value. Provided a Store uses the
-// same mask each time, this value is stable across processes, and may be
-// (de)serialised to save/restore/transmit a Store.
+// Write encodes and writes a key as an opaque 16-byte value. Provided a Store
+// uses the same mask each time, this value is stable across different
+// processes.
 func (k Key) Write(w io.Writer) error {
     var buf [16]byte
     k.Bytes(buf[:])
@@ -45,74 +44,145 @@ func (k Key) Write(w io.Writer) error {
     return err
 }
 
+// ReadKey Read reads and decodes a key from an opaque 16-byte value. Provided a Store
+// uses the same mask each time, this value is stable across different
+// processes.
+func ReadKey(r io.Reader) (Key, error) {
+    var buf [16]byte
+    if _, err := io.ReadFull(r, buf[:]); err != nil {
+        return Key{}, err
+    }
+    return KeyFromBytes(buf[:]), nil
+}
+
 // Bytes encodes a key as an opaque 16-byte value. Provided a Store uses the
-// same mask each time, this value is stable across processes, and may be
-// (de)serialised to save/restore/transmit a Store.
+// same mask each time, this value is stable across different processes.
+//
+// If dest is not large enough to receive 16 bytes, panics with
+// [io.ErrShortBuffer].
 func (k Key) Bytes(dest []byte) {
     if cap(dest) < 16 { panic(io.ErrShortBuffer) }
-    binary.LittleEndian.PutUint64(dest[ 0: 8], k.maskedIndex)
-    binary.LittleEndian.PutUint64(dest[ 8:16], k.maskedGeneration)
+    binary.LittleEndian.PutUint64(dest[ 0: 8], k.index)
+    binary.LittleEndian.PutUint64(dest[ 8:16], k.generation)
 }
 
-func encodeKey(mask uint64, index int, generation uint64) Key {
+// KeyFromBytes decodes a key from an opaque 16-byte value. Provided a Store uses the
+// same mask each time, this value is stable across different processes.
+//
+// If src is not at least 16 bytes long, panics with [io.ErrShortBuffer].
+func KeyFromBytes(src []byte) Key {
+    if len(src) < 16 { panic(io.ErrShortBuffer) }
+    idx := binary.LittleEndian.Uint64(src[ 0: 8])
+    gen := binary.LittleEndian.Uint64(src[ 8:16])
+    return Key{idx, gen}
+}
+
+func encodeKey(index int, generation uint64) Key {
     if index < 0 { panic(ErrRange) }
-    return Key{uint64(index) & mask, generation & mask}
+    return Key{uint64(index), generation}
 }
 
-func decodeIndex(mask uint64, key Key) (int, bool) {
-    index := key.maskedIndex & mask
+func decodeIndex(key Key) (int, bool) {
+    index := key.index
     if index > math.MaxInt { return -1, false }
     return int(index), true // never returns a value < 0 on success
 }
 
-func decodeGeneration(mask uint64, key Key) uint64 {
-    return key.maskedGeneration & mask
-}
+func lookup[ValueT any](s *Store[ValueT], key Key) (index int, ok bool) {
+    index, ok = decodeIndex(key)
+    if !ok || !s.filled.Get(index) {
+        return -1, false
+    }
 
-type pair[ValueT any] struct {
-    generation uint64
-    value      ValueT
+    generation := key.generation
+    if generation == 0 || s.generations[index] != generation {
+        return -1, false
+    }
+
+    return index, true
 }
 
 // Store is a collection of values, indexed by a unique key. The zero-value
 // for a store is a useful value, but see also [Store.Init].
 type Store[ValueT any] struct {
-    mask        uint64
     generations []uint64
     values      []ValueT
     filled      bitseq.Store // fast lookup for finding gaps
     active      int
     gaps        int
-    limit       int
 }
 
-// Mask returns the mask value used in the Store. See [Store.Init].
-func (s *Store[ValueT]) Mask() uint64 {
-    return s.mask
-}
-
-// Count returns the number of entries in the Store.
+// Count returns the number of values currently in the Store.
 func (s *Store[ValueT]) Count() int {
     return s.active
 }
 
-// Init (re)initialises a Store with a mask that guards against programming
-// errors. Use a unique (or randomly-generated) mask for each store to avoid a
-// key returned from one store being reused incorrectly to access an element in
-// another store.
-//
-// Additionally, limit, if greater than zero, places an upper limit on the
-// number of values the Store may hold at any one time. This is helpful to
-// guard against excessive memory consumption caused by corrupted, erroneous,
-// or malicious keys passed to [Store.Put].
-func (s *Store[ValueT]) Init(mask uint64, limit int) {
-    s.mask        = mask
+// Clear (re)initialises a Store so that it is empty and any backing storage
+// is released.
+func (s *Store[ValueT]) Clear() {
     s.generations = nil
     s.values      = nil
     s.filled      = bitseq.Store{}
     s.gaps        = 0
     s.active      = 0
-    s.limit       = limit
+}
+
+// ReadKeys (re)initialises a store from a binary serialisation, clearing
+// its current contents and repopulating it with keys referencing zero values.
+//
+// Limit, if greater than zero, sets an upper limit on the size (in number of
+// elements) of the backing array. A small but maliciously crated input could
+// otherwise consume a large amount of memory by encoding sparsely distributed
+// keys.
+//
+// It is left to the caller to deserialise values and associate them with their
+// matching key using [Store.Update].
+//
+// This function reads until EOF. [io.ReadLimiter] may be useful.
+//
+// The return value, if not nil, may be [ErrLimit], [ErrConflict] if there
+// is a duplicate key, or may represent an [io] read error.
+func (s *Store[ValueT]) ReadKeys(r io.Reader, limit int) error {
+    s.Clear()
+
+    for {
+        key, err := ReadKey(r)
+        if (err != nil) && errors.Is(err, io.EOF) { return nil }
+        if err != nil { return err }
+
+        index, ok := decodeIndex(key)
+        if (limit > 0) && (index > limit) { return ErrLimit }
+
+        generation := key.generation
+        if !ok { return ErrLimit }
+
+        if index > cap(s.generations) {
+            s.Grow(cap(s.generations) - index)
+        }
+
+        s.generations[index] = generation
+        s.filled.Set(index, true)
+        s.active++
+        // TODO count gaps between 0 and cap(s.generations)
+    }
+}
+
+// WriteKeys writes a binary serialisation of a Store's keys that can later
+// be deserialised and associated with values.
+//
+// It is left to the caller to serialise the values themselves. Note that
+// because [Store.Keys] and [Store.Values] iterate in the same order, it is
+// not strictly necessary to store redundant keys with the serialised values.
+//
+// The return value, if not nil, may represent an [io] write error.
+func (s *Store[ValueT]) WriteKeys(w io.Writer) error {
+    for i := 0; i < len(s.generations); i++ {
+        key := encodeKey(i, s.generations[i])
+        if err := key.Write(w); err != nil {
+            return err
+        }
+    }
+    return nil
 }
 
 // Grow increases the store's capacity, if necessary, to guarantee space for
@@ -125,13 +195,11 @@ func (s *Store[ValueT]) Grow(n int) {
     if n <= s.gaps { return }
     n = n - s.gaps
 
-    if cap(s.generations) + n > s.limit {
-        panic(ErrLimit)
-    }
-
     capBefore := cap(s.generations)
     s.generations = slices.Grow(s.generations, n)
+    s.generations = s.generations[:cap(s.generations)]
     s.values = slices.Grow(s.values, n)
+    s.values = s.values[:cap(s.values)]
     capAfter := cap(s.generations)
     if capBefore == capAfter { return }
     s.filled.Set(capAfter - 1, false)
@@ -142,17 +210,19 @@ func (s *Store[ValueT]) Grow(n int) {
 // identifies it for lookup later.
 //
 // In the unlikely event that the 64-bit generation counter for an entry would
-// overflow, panics with ErrRange.
+// overflow, or in the case that the limit set in [Store.Init] is exceeded,
+// panics with ErrRange or ErrLimit.
 func (s *Store[ValueT]) Insert(value ValueT) Key {
     if s.gaps == 0 {
         // append directly to end of a full store
-        index := len(s.generations)
-        s.Grow(1)
-        s.generations = append(s.generations, 1)
+        index := cap(s.generations)
+        s.Grow(1) // may raise ErrLimit
+        s.generations[index] = 1
+        s.values[index] = value
         s.filled.Set(index, true)
         s.gaps--
         s.active++
-        return encodeKey(s.mask, index, 1)
+        return encodeKey(index, 1)
     } else {
         // reuse a gap
         index := s.filled.NextFalse(-1)
@@ -164,7 +234,7 @@ func (s *Store[ValueT]) Insert(value ValueT) Key {
         s.filled.Set(index, true)
         s.gaps--
         s.active++
-        return encodeKey(s.mask, index, generation)
+        return encodeKey(index, generation)
     }
 }
 
@@ -175,12 +245,12 @@ func (s *Store[ValueT]) Insert(value ValueT) Key {
 // a value, even if the underlying memory in the Store gets reused for a new
 // value.
 func (s *Store[ValueT]) Delete(key Key) error {
-    index, ok := decodeIndex(s.mask, key)
+    index, ok := decodeIndex(key)
     if !ok || !s.filled.Get(index) {
         return ErrNotFound
     }
 
-    generation := decodeGeneration(s.mask, key)
+    generation := key.generation
     if generation == 0 || s.generations[index] != generation {
         return ErrNotFound
     }
@@ -193,68 +263,54 @@ func (s *Store[ValueT]) Delete(key Key) error {
     return nil
 }
 
-// Get retrieves a copy of an entry from the Store, referenced by Key. The
+// Contains returns true iff the key is a valid reference to a current value.
+func (s *Store[ValueT]) Contains(key Key) bool {
+    _, ok := lookup(s, key)
+    return ok
+}
+
+// Get retrieves a copy of a value from the Store, referenced by Key. The
 // second return value is true iff found.
 func (s *Store[ValueT]) Get(key Key) (ValueT, bool) {
-    var zero ValueT
-
-    index, ok := decodeIndex(s.mask, key)
-    if !ok || !s.filled.Get(index) {
+    if index, ok := lookup(s, key); ok {
+        return s.values[index], true
+    } else {
+        var zero ValueT
         return zero, false
     }
-
-    generation := decodeGeneration(s.mask, key)
-    if generation == 0 || s.generations[index] != generation {
-        return zero, false
-    }
-
-    return s.values[index], true
 }
 
-// Update modifies an existing entry in the Store, referenced by Key. May
+// Update modifies an existing value in the Store, referenced by Key. May
 // return ErrNotFound if the key does not reference a valid current entry.
+// Otherwise, returns nil.
 func (s *Store[ValueT]) Update(key Key, value ValueT) error {
-    index, ok := decodeIndex(s.mask, key)
-    if !ok || !s.filled.Get(index) {
+    if index, ok := lookup(s, key); ok {
+        s.values[index] = value
+        return nil
+    } else {
         return ErrNotFound
     }
-
-    return ks.ErrTODO
-}
-
-// Put puts a copy of value in the Store at a location and with a generation
-// count specified by a previously returned Key. This function is designed for
-// restoring contents of a Store e.g. from a serialised form on disk.
-//
-// If an entry already exists at that location (whatever its generation; even
-// if it has been deleted), this function panics with [ErrConflict].
-func (s *Store[ValueT]) Put(key Key, value ValueT) {
-    index, ok := decodeIndex(s.mask, key)
-    if !ok || s.filled.Get(index) {
-        panic(ErrConflict)
-    }
-
-    panic(ks.ErrTODO)
-    // growTo() // TODO
 }
 
 // Keys returns an iterator function that generates each stored key. The order
-// of iteration is not defined. It is not safe to mutate the Store during this
-// iteration.
+// of iteration is not defined, except that [Store.Keys], [Store.Values] and
+// [Store.Pairs] produce values in the same order. It is not safe to mutate the
+// Store during this iteration.
 func (s *Store[ValueT]) Keys() func()(Key, bool) {
     current := -1
     return func() (Key, bool) {
         idx, ok := s.filled.NextTrue(current)
         if !ok { return Key{}, false }
         current = idx
-        key := encodeKey(s.mask, idx, s.generations[idx])
+        key := encodeKey(idx, s.generations[idx])
         return key, true
     }
 }
 
 // Values returns an iterator function that generates each stored value. The
-// order of iteration is not defined. It is not safe to mutate the Store during
-// this iteration.
+// order of iteration is not defined, except that [Store.Keys], [Store.Values]
+// and [Store.Pairs] produce values in the same order. It is not safe to mutate
+// the Store during this iteration.
 func (s *Store[ValueT]) Values() func()(ValueT, bool) {
     current := -1
     return func() (ValueT, bool) {
@@ -266,15 +322,16 @@ func (s *Store[ValueT]) Values() func()(ValueT, bool) {
 }
 
 // Pairs returns an iterator function that generates each stored (Key, Value)
-// pair. The order of iteration is not defined. It is not safe to mutate the
-// Store during this iteration.
+// pair. The order of iteration is not defined, except that [Store.Keys],
+// [Store.Values] and [Store.Pairs] produce values in the same order. It is not
+// safe to mutate the Store during this iteration.
 func (s *Store[ValueT]) Pairs() func()(iter.Pair[Key, ValueT], bool) {
     current := -1
     return func() (pair iter.Pair[Key, ValueT], ok bool) {
         idx, ok := s.filled.NextTrue(current)
         if !ok { return iter.Pair[Key, ValueT]{}, false }
         current = idx
-        key := encodeKey(s.mask, idx, s.generations[idx])
+        key := encodeKey(idx, s.generations[idx])
         return iter.Pair[Key, ValueT]{Key: key, Value: s.values[idx]}, true
     }
 }

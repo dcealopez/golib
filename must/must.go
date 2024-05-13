@@ -57,7 +57,7 @@ func Okf[T any](t T, ok bool, format string, args ... any) T {
 // returns true.
 func Equal[T comparable](a T, b T) bool {
     if a == b { return true }
-    panic(newCompareError[T]("==", a, b, nil))
+    panic(newCompareError[T]("Equal", a, b, nil))
 }
 
 // Equalf panics if the provided comparable values are not equal. Otherwise,
@@ -69,7 +69,7 @@ func Equal[T comparable](a T, b T) bool {
 func Equalf[T comparable](a T, b T, format string, args ... any) bool {
     if a == b { return true }
     err := fmt.Errorf(format, args...)
-    panic(newCompareError[T]("==", a, b, err))
+    panic(newCompareError[T]("Equal", a, b, err))
 }
 
 // True is the equivalent of Equal with a true value.
