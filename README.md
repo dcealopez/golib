@@ -31,12 +31,9 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 
 | Name                    |  Stable   |   Latest    | Description                                         |
 |:------------------------|:---------:|:-----------:|:----------------------------------------------------|
-| `css/tokenizer`         |     -     |  [v2][c01]  | CSS tokenizer for [CSS Syntax Module Level 3][css1] |
 | `dialog`                | [v2][d01] |      -      | cross-platform message boxes & file pickers         |
 | `iter`                  |     -     |  [v2][i01]  | composable lazy iteration                           |
 | `ks`                    |     -     |  [v2][k01]  | *(unstable)* "kitchen sink" of extras               |
-| `html/meta/opengraph`   | [v2][h01] |      -      | HTML meta tags for Facebook's Open Graph protocol   |
-| `html/meta/twittercard` | [v2][h02] |      -      | HTML meta tags for Twitter Cards                    |
 | `must`                  | [v2][m03] |      -      | assertions                                          |
 | `operator`              | [v2][o01] |      -      | operators as functions                              |
 | `tuple`                 | [v2][p01] |      -      | convert to/from tuples                              |
@@ -45,11 +42,12 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 
 ### Data-Structures
 
-| Name      | Stable |  Latest   | Description                                   |
-|:----------|:------:|:---------:|:----------------------------------------------|
-| `bitseq`  |   -    | [v2][b01] | compact "infinite" sequence of bits           |
-| `digraph` |   -    | [v2][d02] | *(unstable)* directed graphs (including DAGs) |
-| `garry`   |   -    | [v2][g01] | generational array indices                    |
+| Name       | Stable |  Latest   | Description                                         |
+|:-----------|:------:|:---------:|:----------------------------------------------------|
+| `bitseq`   |   -    | [v2][b01] | compact "infinite" sequence of bits                 |
+| `genarray` |   -    | [v2][g01] | generational array indices                          |
+| `graph`    |   -    | [v2][d02] | *(unstable)* graphs                                 |
+| `matrix`   |   -    | [v2][m01] | specialised matrices of arbitrary size & dimensions |
 
 
 
@@ -79,6 +77,14 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 | `text/number/rbnf`        |     -     | [v2][t09] | CLDR Rule-Based Number Formats                            |
 | `text/number/symbols`     |     -     | [v2][t10] | CLDR locale-appropriate Number Symbols                    |
 
+### Web
+
+| Name                    |  Stable   |  Latest   | Description                                         |
+|:------------------------|:---------:|:---------:|:----------------------------------------------------|
+| `css/tokenizer`         |     -     | [v2][c01] | CSS tokenizer for [CSS Syntax Module Level 3][css1] |
+| `html/meta/opengraph`   | [v2][h01] |     -     | HTML meta tags for Facebook's Open Graph protocol   |
+| `html/meta/twittercard` | [v2][h02] |     -     | HTML meta tags for Twitter Cards                    |
+
 ### TODO
 
 | Name       | Stable |  Latest  | Description                                 |
@@ -92,7 +98,7 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 [c01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/css/tokenizer
 [d01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/dialog
 [b01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/ds/bitseq
-[d02]: https://pkg.go.dev/github.com/tawesoft/golib/v2/ds/digraph
+[d02]: https://pkg.go.dev/github.com/tawesoft/golib/v2/ds/graph
 [g01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/ds/genarray
 [f01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/fun/either
 [f02]: https://pkg.go.dev/github.com/tawesoft/golib/v2/fun/future
@@ -105,6 +111,7 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 [k01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/ks
 [h01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/meta/opengraph
 [h02]: https://pkg.go.dev/github.com/tawesoft/golib/v2/meta/twittercard
+[m01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/ds/matrix
 [m03]: https://pkg.go.dev/github.com/tawesoft/golib/v2/must
 [o01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/operator
 [p01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/tuple
