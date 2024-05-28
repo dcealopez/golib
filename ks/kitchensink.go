@@ -6,6 +6,7 @@ import (
     "encoding/binary"
     "errors"
     "hash/crc64"
+    "slices"
     "strings"
     "unicode/utf8"
 
@@ -59,15 +60,23 @@ func MustMap[K comparable, V any](m map[K]V) map[K]V {
     return make(map[K]V)
 }
 
-// Reserve grows a slice to fit at least size extra elements. Like the builtin
-// append, it may return an updated slice.
+// Reserve grows a slice, if necessary, to fit at least size extra elements.
 //
-// Deprecated: use [golang.org/x/exp/slices.Grow].
+// Deprecated: use [slices.Grow].
 func Reserve[T any](xs []T, size int) []T {
-    // https://github.com/golang/go/wiki/SliceTricks#extend-capacity
-    if cap(xs) - len(xs) < size {
-        return append(make([]T, 0, len(xs) + size), xs...)
-    }
+    return slices.Grow(xs, size)
+}
+
+// SetLength grows a slice, if necessary, so that has a capacity of at least
+// size elements, and a length of exactly size elements. Any trailing elements
+// in the underlying array that fall beyond the original capacity are zeroed.
+func SetLength[T any](xs []T, size int) []T {
+    precap := cap(xs)
+    grow := size - cap(xs)
+    if grow <= 0 { return xs }
+    xs = slices.Grow(xs, grow)
+    xs = xs[0:size]
+    clear(xs[precap:cap(xs)])
     return xs
 }
 

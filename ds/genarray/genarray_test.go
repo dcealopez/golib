@@ -26,7 +26,7 @@ func ExampleStore() {
 
     // after being deleted, cannot retrieve again
     value, ok = store.Get(world)
-    must.Not(ok, false)
+    must.Not(ok)
 
     // nor delete again
     err = store.Delete(world)

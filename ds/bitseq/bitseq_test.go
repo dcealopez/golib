@@ -16,39 +16,42 @@ func TestStore_String(t *testing.T) {
     const F = false
     var s bitseq.Store
     var args = []struct{
-        index    int
-        value    bool
-        expected string
+        index        int
+        value        bool
+        expectedTrue int
+        expected     string
     }{
-        /*  0 */ {  5, F, ""},
-        /*  1 */ {  2, T, "001"},
+        /*  0 */ {  5, F, 0, ""},
+        /*  1 */ {  2, T, 1, "001"},
 
         // unset
-        /*  2 */ {  2, F, ""},
+        /*  2 */ {  2, F, 0, ""},
 
         // set then set again earlier in sequence
-        /*  3 */ {  3, T, "0001"},
-        /*  4 */ {  1, T, "0101"},
+        /*  3 */ {  3, T, 1, "0001"},
+        /*  4 */ {  1, T, 2, "0101"},
 
         // redundant unset
-        /*  5 */ {  2, F, "0101"},
+        /*  5 */ {  2, F, 2, "0101"},
 
         // double set
-        /*  6 */ {  8, T, "010100001"},
-        /*  7 */ {  8, T, "010100001"},
+        /*  6 */ {  8, T, 3, "010100001"},
+        /*  7 */ {  8, T, 3, "010100001"},
 
         // set and unset past 64-bit boundary
-        /*  8 */ { 65, T, "010100001000000000000000000000000000000000000000000000000000000001"},
-        /*  9 */ { 65, F, "010100001"},
+        /*  8 */ { 65, T, 4, "010100001000000000000000000000000000000000000000000000000000000001"},
+        /*  9 */ { 65, F, 3, "010100001"},
 
         // Trailing zeros don't allocate so this is fine
-        /* 10 */ { math.MaxInt, F, "010100001"},
+        /* 10 */ { math.MaxInt, F, 3, "010100001"},
     }
 
     for i, arg := range args {
         s.Set(arg.index, arg.value)
         got := s.String()
+        numTrue := s.CountTrue()
         expect(t, got == arg.expected, "%d: got %q, expected %q", i, got, arg.expected)
+        expect(t, numTrue == arg.expectedTrue, "%d: got %d true, expected %d", i, numTrue, arg.expectedTrue)
     }
 }
 

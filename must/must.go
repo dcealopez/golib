@@ -83,14 +83,20 @@ func Truef(q bool, format string, args ... any) bool {
 }
 
 // Not is the equivalent of Equal with a false value.
-func Not(q bool, args ... interface{}) bool {
+func Not(q bool) bool {
     return Equal(q, false)
 }
+
+// False is an alias of [Not].
+var False = Not
 
 // Notf is the equivalent of Equalf with a false value.
 func Notf(q bool, format string, args ... any) bool {
     return Equalf(q, false, format, args...)
 }
+
+// Falsef is an alias of [Notf].
+var Falsef = Notf
 
 // Check panics if the error is not nil. Otherwise, it returns a nil error (so
 // that it is convenient to chain). The raised non-nil error is wrapped

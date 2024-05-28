@@ -24,11 +24,19 @@ type Store struct {
     // buckets is the sequence of bits packed into a slice of uint64 values.
     // Trailing zero bits are not necessarily backed by a real bucket.
     buckets []uint64
+
+    // numTrue is the count of true bits
+    numTrue int
+}
+
+// CountTrue returns the number of true bits in the store.
+func (s Store) CountTrue() int {
+    return s.numTrue
 }
 
 // String implements the stringer interface, and prints a bit sequence as '1'
 // and '0' characters from left-to-right. Trailing zeroes are omitted.
-func (s *Store) String() string {
+func (s Store) String() string {
     var buf strings.Builder
     var trailingZeros = 0
 
@@ -51,6 +59,14 @@ func (s *Store) String() string {
     return buf.String()
 }
 
+// Clear resets the sequence to zeroes.
+func (s *Store) Clear() {
+    for i := 0; i < cap(s.buckets); i++ {
+        s.buckets[i] = 0
+    }
+    s.numTrue = 0
+}
+
 // Crop attempts to reclaim any surplus backing memory consumed by trailing
 // zero bits.
 func (s *Store) Crop() {
@@ -66,7 +82,7 @@ func (s *Store) Crop() {
 
 // croppedBuckets returns a subslice of buckets. The subslice excludes any
 // buckets that are solely trailing zeros.
-func (s *Store) croppedBuckets() []uint64 {
+func (s Store) croppedBuckets() []uint64 {
     if s.buckets == nil { return nil }
 
     end := len(s.buckets)
@@ -93,7 +109,7 @@ const magic = uint64(
     (uint64('1') << 56))
 
 // Write writes an opaque binary representation of the Store into w.
-func(s *Store) Write(w io.Writer) error {
+func(s Store) Write(w io.Writer) error {
     var err error
     var crc uint64
 
@@ -146,20 +162,22 @@ func (s *Store) Set(index int, bit bool) {
         s.buckets = s.buckets[0:cap(s.buckets)]
     }
     if bit {
+        if 0 == (s.buckets[bucket] & (1 << offset)) { s.numTrue++ }
         s.buckets[bucket] = s.buckets[bucket] | (1 << offset)
     } else {
+        if 0 != (s.buckets[bucket] & (1 << offset)) { s.numTrue-- }
         s.buckets[bucket] = s.buckets[bucket] & (^(1 << offset))
     }
 }
 
 // Get looks up a bit at a given index, returning true iff it has been set.
 // Panics if index is less than zero.
-func (s *Store) Get(index int) bool {
+func (s Store) Get(index int) bool {
     if (index < 0) { panic(ErrRange) }
     return s.getFromBucket(fromIndex(index))
 }
 
-func (s *Store) getFromBucket(bucket, offset int) bool {
+func (s Store) getFromBucket(bucket, offset int) bool {
     if bucket < len(s.buckets) {
         return (s.buckets[bucket] & (1 << offset)) != 0
     } else {
@@ -169,7 +187,7 @@ func (s *Store) getFromBucket(bucket, offset int) bool {
 
 // NextFalse returns the index of the next false bit found after the given
 // index. To start at the beginning, start with NextFalse(-1).
-func (s *Store) NextFalse(after int) int {
+func (s Store) NextFalse(after int) int {
     buckets := len(s.buckets)
     start := after + 1
     bucket := start / 64
@@ -199,7 +217,7 @@ func (s *Store) NextFalse(after int) int {
 // index. To start at the beginning, start with NextTrue(-1). If the second
 // return value is false, then the search has finished, and the remaining
 // sequence is an infinite sequence of false bits.
-func (s *Store) NextTrue(after int) (int, bool) {
+func (s Store) NextTrue(after int) (int, bool) {
     buckets := len(s.buckets)
     start := after + 1
     bucket := start / 64
@@ -220,6 +238,39 @@ func (s *Store) NextTrue(after int) (int, bool) {
         }
 
         for j := offset; j < limit; j++ {
+            index := (i * 64) + j
+            if s.getFromBucket(i, j) { return index, true }
+        }
+    }
+
+    return -1, false
+}
+
+// PrevTrue returns the index of the previous true bit found before the given
+// index. To start at the end, start with PrevTrue(-1). If the second
+// return value is false, then the search has finished, and the remaining
+// sequence prefix is either empty or all false bits.
+func (s Store) PrevTrue(before int) (int, bool) {
+    if before <= 0 { return -1, false }
+    start := before - 1
+    bucket := start / 64
+
+    for i := bucket; i >= 0; i-- {
+        if s.buckets[i] == 0 { continue }
+
+        var offset, limit int
+        if i == bucket {
+            // First bucket - start search midway through. If the entire
+            // prefix is trailing zeros, we can skip early.
+            offset = start % 64
+            limit = bits.LeadingZeros64(s.buckets[i])
+        } else {
+            // Beginning of a subsequent bucket, skip zero prefix/suffixes.
+            offset = 64 - bits.TrailingZeros64(s.buckets[i])
+            limit = bits.LeadingZeros64(s.buckets[i])
+        }
+
+        for j := offset; j >= limit; j-- {
             index := (i * 64) + j
             if s.getFromBucket(i, j) { return index, true }
         }

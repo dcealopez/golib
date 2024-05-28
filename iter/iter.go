@@ -445,6 +445,17 @@ func Values[X comparable, Y any](xs It[Pair[X, Y]]) It[Y] {
     return Map(func(i Pair[X, Y]) Y { return i.Value }, xs)
 }
 
+// Length exhausts an iterator, returning its length.
+func Length[X any](it It[X]) int {
+    total := 0
+    for {
+        _, ok := it()
+        if !ok { break }
+        total++
+    }
+    return total
+}
+
 // Map returns an iterator that consumes an input iterator (of type X) and
 // produces values (of type Y) for each input value, according to some mapping
 // function f(x X) => y Y.

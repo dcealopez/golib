@@ -20,7 +20,7 @@ func BitwiseXor[I constraints.Integer](a I, b I) I {
 }
 
 // BitwiseNot returns bitwise complement. This is `m ^ x` with m = "all bits
-// set to 1" for unsigned x, and m = -1 for signed x.
+// set to 1" for unsigned x, and m = -1 for Signed x.
 func BitwiseNot[I constraints.Integer](i I) I {
     return ^i
 }
