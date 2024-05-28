@@ -27,6 +27,7 @@ support, are additionally covered by compatible [MIT-like licences](/LICENSE-PAR
 expected for a Go package of v2 or higher. "Latest"
 packages do not. See [MIGRATIONS.md](/MIGRATIONS.md). 
 
+
 ### General Packages
 
 | Name                    |  Stable   |   Latest    | Description                                         |
@@ -42,13 +43,12 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 
 ### Data-Structures
 
-| Name       | Stable |  Latest   | Description                                         |
-|:-----------|:------:|:---------:|:----------------------------------------------------|
-| `bitseq`   |   -    | [v2][b01] | compact "infinite" sequence of bits                 |
-| `genarray` |   -    | [v2][g01] | generational array indices                          |
-| `graph`    |   -    | [v2][d02] | *(unstable)* graphs                                 |
-| `matrix`   |   -    | [v2][m01] | specialised matrices of arbitrary size & dimensions |
-
+| Name          | Stable |  Latest   | Description                                         |
+|:--------------|:------:|:---------:|:----------------------------------------------------|
+| `ds/bitseq`   |   -    | [v2][b01] | compact "infinite" sequence of bits                 |
+| `ds/genarray` |   -    | [v2][g01] | generational array indices                          |
+| `ds/graph`    |   -    | [v2][d02] | *(unstable)* graphs                                 |
+| `ds/matrix`   |   -    | [v2][m01] | specialised matrices of arbitrary size & dimensions |
 
 
 ### Functional-style Packages
@@ -62,6 +62,7 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 | `fun/promise` |     -     | [v2][f05] | store computations to be performed later   |
 | `fun/result`  | [v2][f06] |     -     | "Result" type                              |
 | `fun/slices`  | [v2][f07] |     -     | higher-order functions for slices          |
+
 
 ### Text & Unicode Packages
 
@@ -77,6 +78,7 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 | `text/number/rbnf`        |     -     | [v2][t09] | CLDR Rule-Based Number Formats                            |
 | `text/number/symbols`     |     -     | [v2][t10] | CLDR locale-appropriate Number Symbols                    |
 
+
 ### Web
 
 | Name                    |  Stable   |  Latest   | Description                                         |
@@ -84,6 +86,7 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 | `css/tokenizer`         |     -     | [v2][c01] | CSS tokenizer for [CSS Syntax Module Level 3][css1] |
 | `html/meta/opengraph`   | [v2][h01] |     -     | HTML meta tags for Facebook's Open Graph protocol   |
 | `html/meta/twittercard` | [v2][h02] |     -     | HTML meta tags for Twitter Cards                    |
+
 
 ### TODO
 
