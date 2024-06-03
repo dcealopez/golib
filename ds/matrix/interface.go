@@ -11,7 +11,7 @@ import (
 )
 
 // ErrNotImplemented is the type of error raised by a panic if a matrix method
-// is not implemented. For example, the [Hash] implementation does not support
+// is not implemented. For example, the [hash] implementation does not support
 // an arbitrary dimension.
 var ErrNotImplemented = errors.New("not implemented")
 

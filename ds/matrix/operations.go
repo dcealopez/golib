@@ -21,7 +21,9 @@ func Reduce[T any](m Interface[T], identity T, sum func(a, b T) T) T {
     // increment an offset, carrying over any overflow to the next offset.
     var increment func(i int) bool
     increment = func(i int) bool {
-        if i >= len(lengths) { return false }
+        if i >= len(lengths) {
+            return false
+        }
         offsets[i]++
         if offsets[i] >= lengths[i] {
             offsets[i] = 0
@@ -32,7 +34,9 @@ func Reduce[T any](m Interface[T], identity T, sum func(a, b T) T) T {
 
     for {
         total = sum(total, identity)
-        if !increment(0) { break }
+        if !increment(0) {
+            break
+        }
     }
 
     return identity

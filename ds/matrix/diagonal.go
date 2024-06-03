@@ -7,12 +7,12 @@ import (
     "github.com/tawesoft/golib/v2/ks"
 )
 
-// ErrDiagonalSize is the type of error raised by a panic if a [Diagonal]
-// matrix is resized without equal length sides in each supported dimension.
+// ErrDiagonalSize is the type of error raised by a panic if a diagonal matrix
+// is resized without equal length sides in each supported dimension.
 var ErrDiagonalSize = errors.New("matrix must be diagonal")
 
 // ErrOffDiagonal is the type of error raised by a panic if a value is set in
-// a [Diagonal] matrix at an index that does not lie on the diagonal.
+// a diagonal matrix at an index that does not lie on the diagonal.
 type ErrOffDiagonal struct {
     Index [4]int // x, y, w, z index attempted to access
     Width int
@@ -28,21 +28,20 @@ func (e ErrOffDiagonal) Error() string {
     )
 }
 
-
-// Diagonal implements the matrix [Interface] as a contiguous slice of values
-// making up only the diagonal entries. All entries off the diagonal are zero,
-// and the matrix must have equal length sides in every dimension.
-type Diagonal[T any] struct {
+type diagonal[T any] struct {
     dimensions
     values []T
 }
 
-// NewDiagonal is a matrix [Constructor].
+// NewDiagonal is a matrix [Constructor] that implements a matrix as a
+// contiguous slice of values making up only the diagonal entries. All entries
+// off the diagonal are zero, and the matrix must have equal length sides in
+// every dimension.
 func NewDiagonal[T any]() Interface[T] {
-    return &Diagonal[T]{}
+    return &diagonal[T]{}
 }
 
-func (m Diagonal[T]) index(dimensionality, x, y, z, w int) int {
+func (m diagonal[T]) index(dimensionality, x, y, z, w int) int {
     m.dimensions.check(dimensionality, x, y, z, w)
     ok := false
     switch dimensionality {
@@ -55,7 +54,7 @@ func (m Diagonal[T]) index(dimensionality, x, y, z, w int) int {
     return x
 }
 
-func (m Diagonal[T]) indexN(offsets ... int) int {
+func (m diagonal[T]) indexN(offsets ... int) int {
     first := offsets[0]
     for i := 1; i < len(offsets); i++ {
         if first != offsets[i] { return -1 }
@@ -63,7 +62,7 @@ func (m Diagonal[T]) indexN(offsets ... int) int {
     return first
 }
 
-func (m *Diagonal[T]) resize(dimensionality int, lengths ... int) {
+func (m *diagonal[T]) resize(dimensionality int, lengths ... int) {
     okDiagonal := (dimensionality >= 1) && (dimensionality == len(lengths))
     first := lengths[0]
     for i := 1; i < len(lengths); i++ {
@@ -77,47 +76,47 @@ func (m *Diagonal[T]) resize(dimensionality int, lengths ... int) {
     m.Clear()
 }
 
-func (m *Diagonal[T]) Clear() {
+func (m *diagonal[T]) Clear() {
     if m.values == nil { return }
     clear(m.values[0:cap(m.values)])
 }
 
-func (m Diagonal[T]) Get1D(x int) T {
+func (m diagonal[T]) Get1D(x int) T {
     var zero T
     idx := m.index(1, x, 0, 0, 0)
     if idx < 0 { return zero }
     return m.values[idx]
 }
 
-func (m Diagonal[T]) Get2D(x, y int) T {
+func (m diagonal[T]) Get2D(x, y int) T {
     var zero T
     idx := m.index(2, x, y, 0, 0)
     if idx < 0 { return zero }
     return m.values[idx]
 }
 
-func (m Diagonal[T]) Get3D(x, y, z int) T {
+func (m diagonal[T]) Get3D(x, y, z int) T {
     var zero T
     idx := m.index(3, x, y, z, 0)
     if idx < 0 { return zero }
     return m.values[idx]
 }
 
-func (m Diagonal[T]) Get4D(x, y, z, w int) T {
+func (m diagonal[T]) Get4D(x, y, z, w int) T {
     var zero T
     idx := m.index(4, x, y, z, w)
     if idx < 0 { return zero }
     return m.values[idx]
 }
 
-func (m Diagonal[T]) GetN(offset ... int) T {
+func (m diagonal[T]) GetN(offset ... int) T {
     var zero T
     idx := m.indexN(offset...)
     if idx < 0 { return zero }
     return m.values[idx]
 }
 
-func (m *Diagonal[T]) Set1D(value T, x int) {
+func (m *diagonal[T]) Set1D(value T, x int) {
     idx := m.index(1, x, 0, 0, 0)
     if idx < 0 { panic(ErrOffDiagonal{
         Index:          [4]int{x, 0, 0, 0},
@@ -127,7 +126,7 @@ func (m *Diagonal[T]) Set1D(value T, x int) {
     m.values[idx] = value
 }
 
-func (m *Diagonal[T]) Set2D(value T, x, y int) {
+func (m *diagonal[T]) Set2D(value T, x, y int) {
     idx := m.index(2, x, y, 0, 0)
     if idx < 0 { panic(ErrOffDiagonal{
         Index:          [4]int{x, y, 0, 0},
@@ -137,7 +136,7 @@ func (m *Diagonal[T]) Set2D(value T, x, y int) {
     m.values[idx] = value
 }
 
-func (m *Diagonal[T]) Set3D(value T, x, y, z int) {
+func (m *diagonal[T]) Set3D(value T, x, y, z int) {
     idx := m.index(3, x, y, z, 0)
     if idx < 0 { panic(ErrOffDiagonal{
         Index:          [4]int{x, y, z, 0},
@@ -147,7 +146,7 @@ func (m *Diagonal[T]) Set3D(value T, x, y, z int) {
     m.values[idx] = value
 }
 
-func (m *Diagonal[T]) Set4D(value T, x, y, z, w int) {
+func (m *diagonal[T]) Set4D(value T, x, y, z, w int) {
     idx := m.index(4, x, y, z, w)
     if idx < 0 { panic(ErrOffDiagonal{
         Index:          [4]int{x, y, z, w},
@@ -157,7 +156,7 @@ func (m *Diagonal[T]) Set4D(value T, x, y, z, w int) {
     m.values[idx] = value
 }
 
-func (m *Diagonal[T]) SetN(value T, offsets ... int) {
+func (m *diagonal[T]) SetN(value T, offsets ... int) {
     idx := m.indexN(offsets...)
     if idx < 0 { panic(ErrOffDiagonal{
         Index:          [4]int{},
@@ -167,8 +166,8 @@ func (m *Diagonal[T]) SetN(value T, offsets ... int) {
     m.values[idx] = value
 }
 
-func (m *Diagonal[T]) Resize1D(w int)                { m.resize(1, w) }
-func (m *Diagonal[T]) Resize2D(w, h int)             { m.resize(2, w, h) }
-func (m *Diagonal[T]) Resize3D(w, h, d int)          { m.resize(3, w, h, d) }
-func (m *Diagonal[T]) Resize4D(w, h, d, x int)       { m.resize(4, w, h, d, x) }
-func (m *Diagonal[T]) ResizeN(lengths ... int)       { m.resize(len(lengths), lengths...) }
+func (m *diagonal[T]) Resize1D(w int)          { m.resize(1, w) }
+func (m *diagonal[T]) Resize2D(w, h int)       { m.resize(2, w, h) }
+func (m *diagonal[T]) Resize3D(w, h, d int)    { m.resize(3, w, h, d) }
+func (m *diagonal[T]) Resize4D(w, h, d, x int) { m.resize(4, w, h, d, x) }
+func (m *diagonal[T]) ResizeN(lengths ... int) { m.resize(len(lengths), lengths...) }

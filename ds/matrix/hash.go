@@ -1,14 +1,6 @@
 package matrix
 
-// Hash implements the matrix [Interface] as a hash map with coordinate pairs
-// forming keys.
-//
-// This type is more efficient for representing sparse matrices (i.e. one where
-// most values are zero). As a rule-of-thumb, prefer this type if less than
-// 1/64th of the matrix is set.
-//
-// This type only implements 1- to 4-dimensional matrices.
-type Hash[T any] struct {
+type hash[T any] struct {
     dimensions
     mapping1D map[int]T
     mapping2D map[[2]int]T
@@ -16,56 +8,63 @@ type Hash[T any] struct {
     mapping4D map[[4]int]T
 }
 
-// NewHash is a matrix [Constructor].
+// NewHash is a matrix [Constructor] implemented as a hash map with coordinate
+// pairs forming keys. This type is more efficient for representing sparse
+// matrices (i.e. one where most values are zero).
+//
+// As a rule-of-thumb, prefer this type if less than 1/64th of the matrix has
+// a non-zero value.
+//
+// This type only implements 1- to 4-dimensional matrices.
 func NewHash[T any]() Interface[T] {
-    return &Hash[T]{}
+    return &hash[T]{}
 }
 
-func (m Hash[T]) Get1D(x int) T {
+func (m hash[T]) Get1D(x int) T {
     m.check(1, x, 0, 0, 0)
     value, _ := m.mapping1D[x]
     return value
 }
 
-func (m Hash[T]) Get2D(x, y int) T {
+func (m hash[T]) Get2D(x, y int) T {
     m.check(2, x, y, 0, 0)
     value, _ := m.mapping2D[[2]int{x, y}]
     return value
 }
 
-func (m Hash[T]) Get3D(x, y, z int) T {
+func (m hash[T]) Get3D(x, y, z int) T {
     m.check(3, x, y, z, 0)
     value, _ := m.mapping3D[[3]int{x, y, z}]
     return value
 }
 
-func (m Hash[T]) Get4D(x, y, z, w int) T {
+func (m hash[T]) Get4D(x, y, z, w int) T {
     m.check(4, x, y, z, w)
     value, _ := m.mapping4D[[4]int{x, y, z, w}]
     return value
 }
 
-func (m *Hash[T]) Set1D(value T, x int) {
+func (m *hash[T]) Set1D(value T, x int) {
     m.check(1, x, 0, 0, 0)
     m.mapping1D[x] = value
 }
 
-func (m *Hash[T]) Set2D(value T, x, y int) {
+func (m *hash[T]) Set2D(value T, x, y int) {
     m.check(2, x, y, 0, 0)
     m.mapping2D[[2]int{x, y}] = value
 }
 
-func (m *Hash[T]) Set3D(value T, x, y, z int) {
+func (m *hash[T]) Set3D(value T, x, y, z int) {
     m.check(3, x, y, z, 0)
     m.mapping3D[[3]int{x, y, z}] = value
 }
 
-func (m *Hash[T]) Set4D(value T, x, y, z, w int) {
+func (m *hash[T]) Set4D(value T, x, y, z, w int) {
     m.check(4, x, y, z, w)
     m.mapping4D[[4]int{x, y, z, w}] = value
 }
 
-func (m *Hash[T]) resize(dimensionality, width, height, depth, extent int) Interface[T] {
+func (m *hash[T]) resize(dimensionality, width, height, depth, extent int) Interface[T] {
     m.dimensionality = dimensionality
     m.width  = width
     m.height = height
@@ -111,14 +110,14 @@ func (m *Hash[T]) resize(dimensionality, width, height, depth, extent int) Inter
     return m
 }
 
-func (m *Hash[T]) Clear() {
+func (m *hash[T]) Clear() {
     clear(m.mapping1D)
     clear(m.mapping2D)
     clear(m.mapping3D)
     clear(m.mapping4D)
 }
 
-func (m Hash[T]) Reduce(identity T, sum func(a, b T) T) T {
+func (m hash[T]) Reduce(identity T, sum func(a, b T) T) T {
     total := identity
     switch m.dimensionality {
         case 1: {
@@ -146,23 +145,23 @@ func (m Hash[T]) Reduce(identity T, sum func(a, b T) T) T {
     return total
 }
 
-func (m *Hash[T]) Resize1D(width int) {
+func (m *hash[T]) Resize1D(width int) {
     m.resize(1, width, 1, 1, 1)
 }
 
-func (m *Hash[T]) Resize2D(width, height int) {
+func (m *hash[T]) Resize2D(width, height int) {
     m.resize(2, width, height, 1, 1)
 }
 
-func (m *Hash[T]) Resize3D(width, height, depth int) {
+func (m *hash[T]) Resize3D(width, height, depth int) {
     m.resize(3, width, height, depth, 1)
 }
 
-func (m *Hash[T]) Resize4D(width, height, depth, extent int) {
+func (m *hash[T]) Resize4D(width, height, depth, extent int) {
     m.resize(4, width, height, depth, extent)
 }
 
-func (m *Hash[T]) ResizeN(lengths ... int) {
+func (m *hash[T]) ResizeN(lengths ... int) {
     switch len(lengths) {
         case 1: m.Resize1D(lengths[0])
         case 2: m.Resize2D(lengths[0], lengths[1])
@@ -172,7 +171,7 @@ func (m *Hash[T]) ResizeN(lengths ... int) {
     }
 }
 
-func (m *Hash[T]) GetN(offsets ... int) T {
+func (m *hash[T]) GetN(offsets ... int) T {
     switch len(offsets) {
         case 1: return m.Get1D(offsets[0])
         case 2: return m.Get2D(offsets[0], offsets[1])
@@ -182,7 +181,7 @@ func (m *Hash[T]) GetN(offsets ... int) T {
     }
 }
 
-func (m *Hash[T]) SetN(value T, offsets ... int) {
+func (m *hash[T]) SetN(value T, offsets ... int) {
     switch len(offsets) {
         case 1: m.Set1D(value, offsets[0])
         case 2: m.Set2D(value, offsets[0], offsets[1])
