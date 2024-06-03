@@ -1,15 +1,13 @@
-// Package checked (operator/checked) implements operations on integers
-// that are robust in the event of integer overflow.
+// Package checked (operator/checked) implements operations bounded by
+// limits that are robust in the event of integer overflow.
+//
+// Note: Float variants are not fully tested yet.
 package checked
-
-import (
-    "golang.org/x/exp/constraints"
-)
 
 // Add returns (a + b, true) iff a, b, and the result all lie between min and
 // max inclusive, otherwise returns (0, false). This calculation is robust in
 // the event of integer overflow.
-func Add[N constraints.Integer](min N, max N, a N, b N) (N, bool) {
+func Add[N Number](min N, max N, a N, b N) (N, bool) {
     if (a < min) || (a > max) || (b < min) || (b > max) { return 0, false }
     if (min > max) || (max < min) { return 0, false }
     if (b > 0) && (a > (max - b)) { return 0, false }
@@ -20,7 +18,7 @@ func Add[N constraints.Integer](min N, max N, a N, b N) (N, bool) {
 // Sub returns (a - b, true) iff a, b, and the result all lie between min and
 // max inclusive, otherwise returns (0, false). This calculation is robust in
 // the event of integer overflow.
-func Sub[N constraints.Integer](min N, max N, a N, b N) (N, bool) {
+func Sub[N Number](min N, max N, a N, b N) (N, bool) {
     if (a < min) || (a > max) || (b < min) || (b > max) { return 0, false }
     if (min > max) || (max < min) { return 0, false }
     if (b < 0) && (a > (max + b)) { return 0, false }
@@ -31,7 +29,7 @@ func Sub[N constraints.Integer](min N, max N, a N, b N) (N, bool) {
 // Mul returns (a * b, true) iff a, b, and the result all lie between min and
 // max inclusive, otherwise returns (0, false). This calculation is robust in
 // the event of integer overflow.
-func Mul[N constraints.Integer](min N, max N, a N, b N) (N, bool) {
+func Mul[N Number](min N, max N, a N, b N) (N, bool) {
     if (a < min) || (a > max) || (b < min) || (b > max) { return 0, false }
     if (min > max) || (max < min) { return 0, false }
 
@@ -43,7 +41,7 @@ func Mul[N constraints.Integer](min N, max N, a N, b N) (N, bool) {
 
 // Abs returns (positive i, true) iff both i and the result lie between min and
 // max inclusive. Otherwise, returns (0, false).
-func Abs[N constraints.Integer](min N, max N, i N) (N, bool) {
+func Abs[N Number](min N, max N, i N) (N, bool) {
     if (i < min) || (i > max) { return 0, false }
     if (min > max) || (max < min) { return 0, false }
     if (i < 0) && (0 > (max + i)) { return 0, false }
@@ -53,7 +51,7 @@ func Abs[N constraints.Integer](min N, max N, i N) (N, bool) {
 
 // Inv returns (-i, true) iff both i and the result lie between min and max
 // inclusive. Otherwise, returns (0, false).
-func Inv[N constraints.Integer](min N, max N, i N) (N, bool) {
+func Inv[N Number](min N, max N, i N) (N, bool) {
     if (i < min) || (i > max) { return 0, false }
     if (min > max) || (max < min) { return 0, false }
     if (i < 0) && (0 > (max + i)) { return 0, false }

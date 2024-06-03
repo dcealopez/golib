@@ -48,28 +48,3 @@ func (f FilterEdges) Edges(source VertexIndex) EdgeIterator {
         return target, count, true
     }
 }
-
-// WeightedEdges implements [WeightedIterator] interface by attaching the
-// provided WeightFunc to an existing [Iterator].
-//
-// A simple WeightFunc for unit-weights can be created using the UnitWeightFunc
-// method on an [AdjacencyMatrix].
-//
-// The WeightedIterator implemented by WeightedEdges is only a view of the
-// parent graph and is computed on-the-fly as the parent changes.
-type WeightedEdges[Weight Number] struct {
-    Parent Iterator
-    WeightFunc func(source, target VertexIndex) (weight Weight, ok bool)
-}
-
-func (v WeightedEdges[W]) Vertexes() VertexIterator {
-    return v.Parent.Vertexes()
-}
-
-func (v WeightedEdges[W]) Edges(source VertexIndex) EdgeIterator {
-    return v.Parent.Edges(source)
-}
-
-func (v WeightedEdges[W]) Weight(source, target VertexIndex) (weight W, ok bool) {
-    return v.WeightFunc(source, target)
-}

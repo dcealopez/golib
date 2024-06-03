@@ -7,40 +7,49 @@ import (
     "golang.org/x/exp/constraints"
 )
 
-// Limits are a pair of integer values defining a range between an (inclusive)
-// minimum value and an (inclusive) maximum value.
-type Limits[I constraints.Integer] struct {
-    Min I
-    Max I
+// Number represents any number type that you can support arithmetic using
+// standard Go operators (like a + b, or a ^ b) - i.e. integers & floats.
+type Number interface {
+     constraints.Integer | constraints.Float
+}
+
+// Limits are a pair of values defining a range between an (inclusive) minimum
+// value and an (inclusive) maximum value.
+type Limits[N Number] struct {
+    Min N
+    Max N
 }
 
 // GetLimits returns a filled-in [Limit] representing the widest possible
-// minimum and maximum values for a generic integer type.
-func GetLimits[I constraints.Integer]() Limits[I] {
-    var n Limits[I]
+// minimum and maximum values for a generic type.
+func GetLimits[N Number]() Limits[N] {
+    var n Limits[N]
     switch x := any(&n).(type) {
-        case *Limits[int]:    *x = Int
-        case *Limits[int8]:   *x = Int8
-        case *Limits[int16]:  *x = Int16
-        case *Limits[int32]:  *x = Int32
-        case *Limits[int64]:  *x = Int64
-        case *Limits[uint]:   *x = Uint
-        case *Limits[uint8]:  *x = Uint8
-        case *Limits[uint16]: *x = Uint16
-        case *Limits[uint32]: *x = Uint32
-        case *Limits[uint64]: *x = Uint64
+        case *Limits[int]:     *x = Int
+        case *Limits[int8]:    *x = Int8
+        case *Limits[int16]:   *x = Int16
+        case *Limits[int32]:   *x = Int32
+        case *Limits[int64]:   *x = Int64
+        case *Limits[uint]:    *x = Uint
+        case *Limits[uint8]:   *x = Uint8
+        case *Limits[uint16]:  *x = Uint16
+        case *Limits[uint32]:  *x = Uint32
+        case *Limits[uint64]:  *x = Uint64
+        case *Limits[float32]: *x = Float32
+        case *Limits[float64]: *x = Float64
         default:
             must.Neverf("Limits are not defined for type %T", n)
     }
     return n
 }
 
-// Filled-in [Limits] about different integer types with minimum and maximum
-// set to the largest range supported by the limit.
+// Filled-in [Limits] about different types with minimum and maximum set to the
+// largest range supported by the limit.
 //
 // For signed integers, these are the appropriately sized math.MinInt and
 // math.MaxInt constants. For unsigned integers, these are zero and the
-// appropriately sized math.MaxUint constants.
+// appropriately sized math.MaxUint constants. For floats, these are the
+// appropriately sized negative and positive math.MaxFloat constants.
 var (
     Int   = Limits[int]  {math.MinInt,   math.MaxInt}
     Int8  = Limits[int8] {math.MinInt8,  math.MaxInt8}
@@ -53,6 +62,9 @@ var (
     Uint16 = Limits[uint16]{0, math.MaxUint16}
     Uint32 = Limits[uint32]{0, math.MaxUint32}
     Uint64 = Limits[uint64]{0, math.MaxUint64}
+
+    Float32 = Limits[float32]{-math.MaxFloat32, math.MaxFloat32}
+    Float64 = Limits[float64]{-math.MaxFloat64, math.MaxFloat64}
 )
 
 // Add returns (a + b, true) iff a, b, and the result all lie between the Limit

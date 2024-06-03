@@ -1,5 +1,7 @@
 package matrix
 
+// TODO - resize should have a copy-in-place variant
+
 // Reduce applies the given function pairwise to each value, using the result
 // of the previous application as the first input to the next application, or,
 // for the first application, using the identity value provided as the first
@@ -11,8 +13,17 @@ package matrix
 func Reduce[T any](m Interface[T], identity T, sum func(a, b T) T) T {
     total := identity
     dimensionality := m.Dimensionality()
-    offsets := make([]int, dimensionality) // x, y, z, ...
-    lengths := make([]int, dimensionality)
+    var offsets, lengths []int
+
+    if dimensionality > 4 {
+        offsets = make([]int, dimensionality) // x, y, z, ...
+        lengths = make([]int, dimensionality)
+    } else {
+        // avoid allocation in the common case
+        var offsetsArray, lengthsArray [4]int
+        offsets = offsetsArray[0:dimensionality-1]
+        lengths = lengthsArray[0:dimensionality-1]
+    }
 
     for i := 0; i < dimensionality; i++ {
         lengths[i] = m.DimensionN(i + 1)
@@ -21,7 +32,7 @@ func Reduce[T any](m Interface[T], identity T, sum func(a, b T) T) T {
     // increment an offset, carrying over any overflow to the next offset.
     var increment func(i int) bool
     increment = func(i int) bool {
-        if i >= len(lengths) {
+        if i >= dimensionality {
             return false
         }
         offsets[i]++

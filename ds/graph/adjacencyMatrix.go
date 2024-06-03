@@ -8,9 +8,6 @@ import (
 // (along the x-axis) to a target vertex (along the y-axis), including
 // self-loops, if any.
 //
-// Values are indexed by [VertexIndex] with source vertexes in the x-axis
-// and target vertexes in the y-axis.
-//
 // As a representation of a graph itself, AdjacencyMatrix implements the
 // graph [Iterator] interface.
 type AdjacencyMatrix struct {
@@ -162,27 +159,5 @@ func (m AdjacencyMatrix) Calculate(g Iterator) {
             current := m.Get(vertexIdx, targetIdx)
             m.Set(vertexIdx, targetIdx, current + edges)
         }
-    }
-}
-
-// UnitWeightedIterator returns a WeightedIterator that gives every existing
-// edge in the parent graph a weight of one.
-//
-// The returned WeightedIterator is only a view of the parent graph and is
-// computed on-the-fly as the parent and the adjacency matrix change.
-func (m AdjacencyMatrix) UnitWeightedIterator(it Iterator) WeightedIterator[int] {
-    return WeightedEdges[int]{
-        Parent: it,
-        WeightFunc: m.UnitWeightFunc,
-    }
-}
-
-// UnitWeightFunc implements a WeightFunc for a [WeightedEdges] that gives
-// every existing edge a weight of one.
-func (m AdjacencyMatrix) UnitWeightFunc(source, target VertexIndex) (weight int, ok bool) {
-    if m.Get(source, target) > 0 {
-        return 1, true
-    } else {
-        return 0, false
     }
 }

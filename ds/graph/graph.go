@@ -14,13 +14,19 @@ import (
     "golang.org/x/exp/constraints"
 )
 
-// Number represents any integer or float type. This is used to define weights.
-type Number interface { constraints.Integer | constraints.Float }
+// Weight represents the value of a weighted edge from one vertex to another.
+// It can be any integer or float type. Weights may be negative, except where
+// indicated by certain algorithms.
+type Weight interface { constraints.Integer | constraints.Float }
 
 // VertexIndex is a non-negative index that uniquely identifies each vertex
 // in a graph. Vertex indexes do not have to be consecutive or sorted, may be
 // sparse, and do not have to start at zero, but it may be more efficient where
 // that is the case.
+//
+// Many algorithms in this package will have computational complexity
+// proportionate to the maximum VertexIndex, and require memory proportionate
+// to the maximum VertexIndex squared.
 type VertexIndex int
 
 // Iterator is the basic interface that a graph data type must implement to be
@@ -43,15 +49,16 @@ type Iterator interface {
     Edges(source VertexIndex) EdgeIterator
 }
 
-type WeightedIterator[Weight Number] interface {
-    Iterator
+// WeightFunc is the type of a function that gives a weight between two
+// vertexes in a graph. Algorithms will only call this if a directed edge
+// already exists from the source to the target vertex, so it is not necessary
+// to validate the arguments.
+type WeightFunc[W Weight] func(source, target VertexIndex) W
 
-    // Weight returns the weight of the edge(s) between source and target.
-    // If the boolean return value is false, the weight is infinite.
-    // In the case of a multigraph, multiple edges must be reduced into
-    // a single value e.g. by picking the smallest. Weights may be negative,
-    // except where indicated by certain algorithms.
-    Weight(source, target VertexIndex) (weight Weight, ok bool)
+// UnitWeightFunc implements a [WeightFunc] that gives every existing edge an
+// int-typed weight of 1.
+func UnitWeightFunc(_, _ VertexIndex) int {
+    return 1
 }
 
 // VertexIterator is the type of a generator function that, for some particular

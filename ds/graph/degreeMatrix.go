@@ -121,7 +121,7 @@ func Roots(
 func Leaves(
     vertexes func() VertexIterator,
     indegree func(VertexIndex) int,
-    outdegree func(index VertexIndex) int,
+    outdegree func(VertexIndex) int,
 ) VertexIterator {
     x := VertexIndex(0)
     limit := vertexIndexLimit(vertexes)

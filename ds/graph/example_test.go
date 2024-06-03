@@ -119,7 +119,7 @@ func Example_solarSystem() {
     // construct a breadth-first search tree of everything reachable from the
     // sun i.e. all the solar system planets, and all their moons.
     solSystem := graph.NewBfsTree()
-    solSystem.Calculate(d, sun)
+    solSystem.CalculateUnweighted(d, sun)
 
     // efficiently returns true iff a orbits b
     orbits := func(a graph.VertexIndex, b graph.VertexIndex) bool {

@@ -24,6 +24,7 @@ func TestSub(t *testing.T) {
 func TestMul(t *testing.T) {
     assert.Equal(t, tuple.ToT2(27,        true), tuple.ToT2(checked.Int.Mul(3, 9)))
     assert.Equal(t, tuple.ToT2(int8(0),  false), tuple.ToT2(checked.Int8.Mul(64, 3)))
+    assert.False(t, tuple.ToT2(checked.Float64.Mul(math.MaxFloat64, 2.0)).B)
 }
 
 func FuzzAdd_Int32(f *testing.F) {
