@@ -5,14 +5,16 @@
 //
 // Many of the algorithms and definitions are thanks to CLRS "Introduction to
 // Algorithms", 3rd edition.
+//
+// In general, this package is written & composed in such a way as to reduce
+// runtime memory (re)allocations by encouraging the caller to reuse buffers.
 package graph
 
 import (
-    "github.com/tawesoft/golib/v2/iter"
     "golang.org/x/exp/constraints"
 )
 
-// Number represents any integer or float type.
+// Number represents any integer or float type. This is used to define weights.
 type Number interface { constraints.Integer | constraints.Float }
 
 // VertexIndex is a non-negative index that uniquely identifies each vertex
@@ -21,59 +23,73 @@ type Number interface { constraints.Integer | constraints.Float }
 // that is the case.
 type VertexIndex int
 
-// EdgeIndex optionally uniquely identifies a directed edge from a source
-// vertex to a target vertex, for a unique (source, target) vertex pair in a
-// multigraph. Edge indexes do not have to be consecutive or sorted, may be
-// sparse, and do not have to start at zero, but it may be more efficient where
-// that is the case.
-//
-// An EdgeIndex is only particularly useful in a multigraph. In normal graphs,
-// each edge from a source can always be uniquely identified by the target.
-// In this case, EdgeIndex is equal to the VertexIndex of the target.
-//
-// In some graph representations, unique information about each edge is lost.
-// By convention, use -1 to represent a missing index.
-//
-// Note that while edges are always directed, an undirected graph can be
-// implemented efficiently by representing an undirected edge as a directed
-// edge from a lower-indexed vertex to a higher-indexed vertex, or vice-versa.
-type EdgeIndex int
-
 // Iterator is the basic interface that a graph data type must implement to be
 // able to use many of the algorithms in this package.
 //
-// The mapping between this general-purpose graph interface and a given graph
-// implementation is achieved through iterator-style functions that generate a
-// [VertexIndex]. The Edges iterator function generates a count of the number
-// of edges between the two vertexes. If the graph is not a multigraph, this
-// count will always be one. Each iterator-style function returns false as the
-// last argument iff they have completed.
-//
 // A graph can have many equivalent implementations: a data structure, perhaps
-// an adjacency list or an adjacency matrix; or an algorithm, for example an
-// algorithm that generates an infinite line of vertexes with a directed edge
-// from each vertex to its successor.
+// an adjacency list or an adjacency matrix; or an algorithm. The mapping
+// between this general-purpose graph interface and a given graph
+// implementation is achieved through two iterator-style functions.
 //
 // Graphs may contain cycles, loops, be disjoint, be multigraphs, be infinite,
 // etc. without restriction except where noted. These properties can be tested
 // for by algorithms implemented in this package.
+//
+// Edges are directed, but an undirected graph can always be implemented
+// efficiently by defining an "undirected edge" as a directed edge from a
+// lower VertexIndex to a higher VertexIndex.
 type Iterator interface {
     Vertexes() VertexIterator
     Edges(source VertexIndex) EdgeIterator
 }
 
+type WeightedIterator[Weight Number] interface {
+    Iterator
+
+    // Weight returns the weight of the edge(s) between source and target.
+    // If the boolean return value is false, the weight is infinite.
+    // In the case of a multigraph, multiple edges must be reduced into
+    // a single value e.g. by picking the smallest. Weights may be negative,
+    // except where indicated by certain algorithms.
+    Weight(source, target VertexIndex) (weight Weight, ok bool)
+}
+
+// VertexIterator is the type of a generator function that, for some particular
+// graph, generates a VertexIndex for each vertex in the graph.
+//
+// The last return value controls the iteration - if false, the iteration has
+// finished and the other return value is not useful.
 type VertexIterator = func() (vertex VertexIndex, ok bool)
+
+// EdgeIterator is the type of a generator function that, for some particular
+// source vertex, generates each target vertex connected by at least one
+// directed edge, and a count of the number of edges between them. If the graph
+// is not a multigraph, this count will always be one.
+//
+// The last return value controls the iteration - if false, the iteration has
+// finished and the other return values are not useful.
 type EdgeIterator = func() (target VertexIndex, count int, ok bool)
 
-// Builder is a basic interface for building a graph.
+// Adder is a basic interface for adding to a graph or matrix. With [TeeAdder],
+// this can be used to keep generated graphs and/or matrices, like an
+// [AdjacencyMatrix], in sync with the graph they are generated from.
 /*
-type Builder[T any] interface {
-    Iterator
+type Adder[T any] interface {
     AddVertex() VertexIndex
     AddEdge(source VertexIndex, target VertexIndex)
 }
+
+// Remover is a basic interface for removing from a graph or matrix. With
+// [TeeRemover], this can be used to keep generated graphs and/or matrices,
+// like an [AdjacencyMatrix], in sync with the graph they are generated from.
+type Remover[T any] interface {
+    // Remove all edges first!
+    RemoveVertex(target VertexIndex)
+    RemoveEdge(source VertexIndex, target VertexIndex)
+}
 TODO
-func TeeBuilder[T any](builders ... Builder[T]) { ... }
+func TeeAdder[T any](adders ... Adder[T]) { ... }
+func TeeRemover[T any](removers ... Remover[T]) { ... }
 */
 
 // vertexIndexLimit returns the size of a slice needed to hold the largest
@@ -87,49 +103,4 @@ func vertexIndexLimit(g func() VertexIterator) VertexIndex {
         if idx > highest { highest = idx }
     }
     return highest + 1
-}
-
-// FilterVertexes implements the graph [Iterator] interface and represents a
-// subgraph of a parent graph of only vertexes that satisfy the given filter
-// function.
-//
-// The Iterator implemented by FilterVertexes is only a view of the parent graph
-// and is computed on-the-fly as the parent changes.
-type FilterVertexes struct {
-    Parent Iterator
-    Filter func(vertex VertexIndex) bool
-}
-
-func (f FilterVertexes) Vertexes() func() (VertexIndex, bool) {
-    if f.Filter == nil { return f.Parent.Vertexes() }
-    return iter.Filter(f.Filter, f.Parent.Vertexes())
-}
-
-func (f FilterVertexes) Edges(source VertexIndex) func() (VertexIndex, int, bool) {
-    return f.Parent.Edges(source)
-}
-
-// FilterEdges implements the graph [Iterator] interface and represents a
-// subgraph of a parent graph of only edges that satisfy the given filter
-// function.
-//
-// The Iterator implemented by FilterEdges is only a view of the parent graph and
-// is computed on-the-fly as the parent changes.
-type FilterEdges struct {
-    Parent Iterator
-    Filter func(source VertexIndex, target VertexIndex) bool
-}
-
-func (f FilterEdges) Vertexes() func() (VertexIndex, bool) {
-    return f.Parent.Vertexes()
-}
-
-func (f FilterEdges) Edges(source VertexIndex) func() (VertexIndex, int, bool) {
-    if f.Filter == nil { return f.Parent.Edges(source) }
-    it := f.Parent.Edges(source)
-    return func() (_ VertexIndex, _ int, _ bool) {
-        target, count, ok := it()
-        if !ok || !f.Filter(source, target) { return }
-        return target, count, true
-    }
 }

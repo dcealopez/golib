@@ -164,3 +164,25 @@ func (m AdjacencyMatrix) Calculate(g Iterator) {
         }
     }
 }
+
+// UnitWeightedIterator returns a WeightedIterator that gives every existing
+// edge in the parent graph a weight of one.
+//
+// The returned WeightedIterator is only a view of the parent graph and is
+// computed on-the-fly as the parent and the adjacency matrix change.
+func (m AdjacencyMatrix) UnitWeightedIterator(it Iterator) WeightedIterator[int] {
+    return WeightedEdges[int]{
+        Parent: it,
+        WeightFunc: m.UnitWeightFunc,
+    }
+}
+
+// UnitWeightFunc implements a WeightFunc for a [WeightedEdges] that gives
+// every existing edge a weight of one.
+func (m AdjacencyMatrix) UnitWeightFunc(source, target VertexIndex) (weight int, ok bool) {
+    if m.Get(source, target) > 0 {
+        return 1, true
+    } else {
+        return 0, false
+    }
+}

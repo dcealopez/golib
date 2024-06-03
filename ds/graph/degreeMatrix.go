@@ -67,8 +67,8 @@ func (m DegreeMatrix) Clear() {
 // function.
 //
 // For example, an in-, out-, or undirected degree matrix may be constructed
-// from an [AdjacencyMatrix] using its Vertexes method and its indegree,
-// outdegree, and degree methods respectively.
+// from an [AdjacencyMatrix] using its Vertexes method and its Indegree,
+// Outdegree, and Degree methods respectively.
 //
 // Each vertex index in the degree matrix corresponds to the matching index
 // in the input graph g. Once a degree matrix has been constructed, it is not
@@ -93,7 +93,8 @@ func (m DegreeMatrix) Calculate(g func() VertexIterator, degree func(index Verte
 // Roots returns an iterator that generates only the indexes of vertexes that
 // have no parents i.e. root vertexes in a directed graph.
 //
-// A degree function can be made using an [AdjacencyMatrix] or [DegreeMatrix].
+// A degree function can be made by passing an appropriate method from an
+// [AdjacencyMatrix] or [DegreeMatrix].
 func Roots(
     vertexes func() VertexIterator,
     indegree func(VertexIndex) int,
@@ -115,7 +116,8 @@ func Roots(
 // Leaves returns an iterator that generates indexes of vertexes that have
 // exactly one parent and exactly zero children in a directed graph.
 //
-// A degree function can be made using an [AdjacencyMatrix] or [DegreeMatrix].
+// A degree function can be made by passing an appropriate method from an
+// [AdjacencyMatrix] or [DegreeMatrix].
 func Leaves(
     vertexes func() VertexIterator,
     indegree func(VertexIndex) int,

@@ -116,6 +116,11 @@ func Example_solarSystem() {
     indegreeMatrix.Calculate(d.Vertexes, orbitMatrix.Indegree)
     outdegreeMatrix.Calculate(d.Vertexes, orbitMatrix.Outdegree)
 
+    // construct a breadth-first search tree of everything reachable from the
+    // sun i.e. all the solar system planets, and all their moons.
+    solSystem := graph.NewBfsTree()
+    solSystem.Calculate(d, sun)
+
     // efficiently returns true iff a orbits b
     orbits := func(a graph.VertexIndex, b graph.VertexIndex) bool {
         return orbitMatrix.Get(b, a) > 0
@@ -163,8 +168,20 @@ func Example_solarSystem() {
         numSatellites(mars),
         strings.Join(sorted(slices.Map(vertexName, iter.ToSlice(satellites(mars)))), " and "))
 
+    if solSystem.Reachable(phobos) {
+        fmt.Println("The solar system contains Phobos.")
+    }
+    if !solSystem.Reachable(proximaCentauri ) {
+        fmt.Println("The solar system does not contain Proxima Centauri.")
+    }
+    fmt.Printf("Phobos orbits %s.\n",
+        vertexName(must.Ok(solSystem.Predecessor(phobos))))
+
     // Output:
     // The graph contains data for 2 solar systems: Alpha Centauri and Sol.
     // The sun is orbited by 8 satellites.
     // Mars is orbited by 2 satellites: Demos and Phobos.
+    // The solar system contains Phobos.
+    // The solar system does not contain Proxima Centauri.
+    // Phobos orbits Mars.
 }
