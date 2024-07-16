@@ -1,11 +1,9 @@
-package matrix
+//go:build exclude
+package matrix2
 
 type hash[T any] struct {
     dimensions
-    mapping1D map[int]T
-    mapping2D map[[2]int]T
-    mapping3D map[[3]int]T
-    mapping4D map[[4]int]T
+    mapping map[[4]int]T
 }
 
 // NewHash is a matrix [Constructor] implemented as a hash map with coordinate
@@ -21,47 +19,40 @@ func NewHash[T any]() Interface[T] {
 }
 
 func (m hash[T]) Get1D(x int) T {
-    m.check(1, x, 0, 0, 0)
-    value, _ := m.mapping1D[x]
+    value, _ := m.mapping[[4]int{x, 0, 0, 0}]
     return value
 }
 
 func (m hash[T]) Get2D(x, y int) T {
-    m.check(2, x, y, 0, 0)
-    value, _ := m.mapping2D[[2]int{x, y}]
+    value, _ := m.mapping[[4]int{x, y, 0, 0}]
     return value
 }
 
 func (m hash[T]) Get3D(x, y, z int) T {
-    m.check(3, x, y, z, 0)
-    value, _ := m.mapping3D[[3]int{x, y, z}]
+    value, _ := m.mapping[[4]int{x, y, z, 0}]
     return value
 }
 
 func (m hash[T]) Get4D(x, y, z, w int) T {
-    m.check(4, x, y, z, w)
-    value, _ := m.mapping4D[[4]int{x, y, z, w}]
+    value, _ := m.mapping[[4]int{x, y, z, w}]
     return value
 }
 
 func (m *hash[T]) Set1D(value T, x int) {
-    m.check(1, x, 0, 0, 0)
-    m.mapping1D[x] = value
+    m.mapping[[4]int{x, 0, 0, 0}] = value
 }
 
 func (m *hash[T]) Set2D(value T, x, y int) {
-    m.check(2, x, y, 0, 0)
-    m.mapping2D[[2]int{x, y}] = value
+    m.mapping[[4]int{x, y, 0, 0}] = value
 }
 
 func (m *hash[T]) Set3D(value T, x, y, z int) {
-    m.check(3, x, y, z, 0)
-    m.mapping3D[[3]int{x, y, z}] = value
+    m.mapping[[4]int{x, y, z, 0}] = value
 }
 
 func (m *hash[T]) Set4D(value T, x, y, z, w int) {
     m.check(4, x, y, z, w)
-    m.mapping4D[[4]int{x, y, z, w}] = value
+    m.mapping[[4]int{x, y, z, w}] = value
 }
 
 func (m *hash[T]) resize(dimensionality, width, height, depth, extent int) Interface[T] {
@@ -70,79 +61,13 @@ func (m *hash[T]) resize(dimensionality, width, height, depth, extent int) Inter
     m.height = height
     m.depth  = depth
     m.extent = extent
-
-    switch m.dimensionality {
-        case 1: {
-            if m.mapping1D == nil {
-                m.mapping1D = make(map[int]T)
-            }
-            m.mapping2D = nil
-            m.mapping3D = nil
-            m.mapping4D = nil
-        }
-        case 2: {
-            m.mapping1D = nil
-            if m.mapping2D == nil {
-                m.mapping2D = make(map[[2]int]T)
-            }
-            m.mapping3D = nil
-            m.mapping4D = nil
-        }
-        case 3: {
-            m.mapping1D = nil
-            m.mapping2D = nil
-            if m.mapping3D == nil {
-                m.mapping3D = make(map[[3]int]T)
-            }
-            m.mapping4D = nil
-        }
-        case 4: {
-            m.mapping1D = nil
-            m.mapping2D = nil
-            m.mapping3D = nil
-            if m.mapping4D == nil {
-                m.mapping4D = make(map[[4]int]T)
-            }
-        }
-    }
-
+    m.mapping = make(map[[4]int]T)
     m.Clear()
     return m
 }
 
 func (m *hash[T]) Clear() {
-    clear(m.mapping1D)
-    clear(m.mapping2D)
-    clear(m.mapping3D)
-    clear(m.mapping4D)
-}
-
-func (m hash[T]) Reduce(identity T, sum func(a, b T) T) T {
-    total := identity
-    switch m.dimensionality {
-        case 1: {
-            for _, v := range m.mapping1D {
-                total = sum(total, v)
-            }
-        }
-        case 2: {
-            for _, v := range m.mapping2D {
-                total = sum(total, v)
-            }
-        }
-        case 3: {
-            for _, v := range m.mapping3D {
-                total = sum(total, v)
-            }
-        }
-        case 4: {
-            for _, v := range m.mapping4D {
-                total = sum(total, v)
-            }
-        }
-    }
-    // case 0 is fine, too
-    return total
+    clear(m.mapping)
 }
 
 func (m *hash[T]) Resize1D(width int) {

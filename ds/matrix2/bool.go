@@ -1,4 +1,5 @@
-package matrix
+//go:build exclude
+package matrix2
 
 import (
     "github.com/tawesoft/golib/v2/ds/bitseq"

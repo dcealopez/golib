@@ -1,33 +1,33 @@
 package graph
 
-import (
-    "github.com/tawesoft/golib/v2/ds/matrix"
-)
-
 // AdjacencyMatrix represents the number of directed edges from a source vertex
 // (along the x-axis) to a target vertex (along the y-axis), including
 // self-loops, if any.
 //
-// As a representation of a graph itself, AdjacencyMatrix implements the
-// graph [Iterator] interface.
+// As a representation of a graph itself, AdjacencyMatrix implements the graph
+// [Iterator] interface. As it can be updated incrementally, AdjacencyMatrix
+// also implements the [Dynamic] interface.
 type AdjacencyMatrix struct {
-    mat matrix.Interface[int]
+    mat matrix2.Interface[int]
 }
+
+// TODO implement Dynamic
+// TODO implement transpose, undirected
 
 // NewAdjacencyMatrix returns an AdjacencyMatrix backed by the specified
 // matrix implementation. If nil, defaults to [matrix.NewBit].
 //
 // A matrix implementation with a wider data type is needed to implement an
 // AdjacencyMatrix for a multigraph e.g. [matrix.NewGrid].
-func NewAdjacencyMatrix(m matrix.Constructor[int]) AdjacencyMatrix {
-    if m == nil { m = matrix.NewBit }
+func NewAdjacencyMatrix(m matrix2.Constructor[int]) AdjacencyMatrix {
+    if m == nil { m = matrix2.NewBit }
     return AdjacencyMatrix{
-        mat: matrix.New2D(m, 0, 0),
+        mat: matrix2.New2D(m, 0, 0),
     }
 }
 
 // Matrix returns a pointer to the underlying [matrix.Interface] (of type int).
-func (m AdjacencyMatrix) Matrix() matrix.Interface[int] {
+func (m AdjacencyMatrix) Matrix() matrix2.Interface[int] {
     return m.mat
 }
 
@@ -53,7 +53,7 @@ func (m AdjacencyMatrix) Width() int {
 
 // CountEdges returns the total number of edges in the adjacency matrix.
 func (m AdjacencyMatrix) CountEdges() int {
-    return matrix.Reduce(m.mat, 0, func(a, b int) int { return a + b })
+    return matrix2.Reduce(m.mat, 0, func(a, b int) int { return a + b })
 }
 
 func (m AdjacencyMatrix) Clear() {
@@ -133,9 +133,18 @@ func (m AdjacencyMatrix) Edges(source VertexIndex) func() (VertexIndex, int, boo
     }
 }
 
+// Weight implements the graph [Iterator] Weight method. The weight of each
+// edge in an adjacency matrix is defined as the number of edges from source to
+// target in the input matrix (including self-loops, if any). If the graph
+// is not a multigraph, this is always exactly one for any existing edge in the
+// matrix.
+func (m AdjacencyMatrix) Weight(source, target VertexIndex) Weight {
+    return Weight(m.Get(source, target))
+}
+
 // Calculate computes the adjacency matrix for a finite graph g. The created
-// adjacency matrix is itself a graph implementing [Interface] containing
-// only the vertexes of g with at least one inward or outward edge.
+// adjacency matrix is itself a graph implementing [Iterator] and [Dynamic],
+// containing only the vertexes of g with at least one inward or outward edge.
 //
 // Each vertex index in the adjacency matrix corresponds to a matching index
 // in graph g. Once an adjacency matrix has been constructed, it is not

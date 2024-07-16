@@ -39,7 +39,10 @@ func (u Universe) Edges(source graph.VertexIndex) func() (target graph.VertexInd
     }
 }
 
-// AddVertex implements the graph.Builder interface
+func (u Universe) Weight(source, target graph.VertexIndex) graph.Weight {
+    return graph.Weight(u.Bodies[source].Orbits[target])
+}
+
 func (u *Universe) AddVertex() graph.VertexIndex {
     index := graph.VertexIndex(len(u.Bodies))
     if u.Bodies == nil {
@@ -49,7 +52,6 @@ func (u *Universe) AddVertex() graph.VertexIndex {
     return index
 }
 
-// AddEdge implements the graph.Builder interface
 func (u *Universe) AddEdge(from graph.VertexIndex, to graph.VertexIndex) {
     u.Bodies[from].Orbits[to] = Distance(0)
 }

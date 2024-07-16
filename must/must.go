@@ -173,3 +173,37 @@ func Never() {
 func Neverf(format string, args ... any) {
     panic(NeverError{fmt.Errorf(format, args...)})
 }
+
+// Nil returns true if v is (untyped) nil. Otherwise, panics.
+func Nil(v any) bool {
+    if v == nil { return true }
+    panic(newCompareError[any]("Nil", v, nil, nil))
+}
+
+// Nilf returns true if v is (untyped) nil. Otherwise, panics.
+//
+// The [fmt.Sprintf] -style format string and with optional arguments are used
+// to format the error message. The formatted error message is wrapped in
+// [CompareError] before panicking.
+func Nilf(v any, format string, args ... any) bool {
+    if v == nil { return true }
+    err := fmt.Errorf(format, args...)
+    panic(newCompareError[any]("Nil", v, nil, err))
+}
+
+// NotNil returns true if v is not (untyped) nil. Otherwise, panics.
+func NotNil(v any) bool {
+    if v != nil { return true }
+    panic(newCompareError[any]("NotNil", v, nil, nil))
+}
+
+// NotNilf returns true if v is not (untyped) nil. Otherwise, panics.
+//
+// The [fmt.Sprintf] -style format string and with optional arguments are used
+// to format the error message. The formatted error message is wrapped in
+// [CompareError] before panicking.
+func NotNilf(v any, format string, args ... any) bool {
+    if v != nil { return true }
+    err := fmt.Errorf(format, args...)
+    panic(newCompareError[any]("NotNil", v, nil, err))
+}

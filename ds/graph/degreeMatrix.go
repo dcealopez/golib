@@ -1,9 +1,5 @@
 package graph
 
-import (
-    "github.com/tawesoft/golib/v2/ds/matrix"
-)
-
 // DegreeMatrix represents the number of edges on a vertex (to or from any
 // other vertex in aggregate). This may be the in-, out-, or undirected-,
 // degree.
@@ -13,18 +9,18 @@ import (
 // Values are indexed by [VertexIndex]. A DegreeMatrix is a diagonal-matrix;
 // values off the diagonal are zero.
 type DegreeMatrix struct {
-    mat matrix.Interface[int]
+    mat matrix2.Interface[int]
 }
 
 // NewDegreeMatrix returns a new degree matrix of undefined size.
 func NewDegreeMatrix() DegreeMatrix {
     return DegreeMatrix{
-        mat: matrix.New2D[int](matrix.NewDiagonal[int], 0, 0),
+        mat: matrix2.New2D[int](matrix2.NewDiagonal[int], 0, 0),
     }
 }
 
 // Matrix returns a pointer to the underlying [matrix.Interface] (of type int).
-func (m DegreeMatrix) Matrix() matrix.Interface[int] {
+func (m DegreeMatrix) Matrix() matrix2.Interface[int] {
     return m.mat
 }
 
@@ -48,7 +44,7 @@ func (m DegreeMatrix) Width() int {
 
 // CountEdges returns the total number of edges in the degree matrix.
 func (m DegreeMatrix) CountEdges() int {
-    return matrix.Reduce(m.mat, 0, func(a, b int) int { return a + b })
+    return matrix2.Reduce(m.mat, 0, func(a, b int) int { return a + b })
 }
 
 // Resize updates the degree matrix, if necessary, so that it has at least
