@@ -1,13 +1,13 @@
-package matrix_test
+package dimensions_test
 
 import (
     "slices"
     "testing"
 
-    "github.com/tawesoft/golib/v2/ds/matrix"
+    "github.com/tawesoft/golib/v2/ds/matrix/dimensions"
 )
 
-func TestDimensions_Index(t *testing.T) {
+func TestD_Index(t *testing.T) {
     tests := []struct {
         // args is the parameters passed to NewDimensions
         args []int
@@ -124,7 +124,7 @@ func TestDimensions_Index(t *testing.T) {
         },
     }
     for _, tt := range tests {
-        dim := matrix.NewDimensions(tt.args...)
+        dim := dimensions.New(tt.args...)
         stride := (len(tt.args) * 2) + 1
         numEncodedTests := len(tt.values) / stride
 
