@@ -8,3 +8,4 @@
 *.out
 /_*
 ._*
+!/ds/matrix/matrix_test.go

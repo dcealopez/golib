@@ -1,6 +1,7 @@
 package operator
 
 import (
+    "github.com/tawesoft/golib/v2/math/integer"
     "golang.org/x/exp/constraints"
 )
 
@@ -30,14 +31,9 @@ func Mod[I constraints.Integer](a I, b I) I {
     return a % b
 }
 
-// Pow returns a to the power of b for integer inputs. The result is undefined
-// for negative values of b.
+// Pow returns a to the power of b for integer inputs.
 func Pow[I constraints.Integer](a, b I) I {
-    // see https://en.wikipedia.org/wiki/Exponentiation_by_squaring
-    if b <= 0 { return 1 }
-    if b <= 1 { return a }
-    if (b % 2) == 0 { return Pow(a * a, b / 2) }
-    return Pow(a * a, (b - 1) / 2)
+    return integer.Pow(a, b)
 }
 
 // ShiftLeft returns bitwise shift left (i.e. `a << b`) of integer inputs.

@@ -1,9 +1,27 @@
 package test
 
 import (
+    "errors"
     "testing"
     "time"
 )
+
+// Panics returns true iff calling f panics with an error and either target
+// is nil or errors.Is(error, target) is true.
+func Panics(t *testing.T, f func(), target error) (result bool) {
+    t.Helper()
+    defer func() {
+        if r := recover(); r == nil {
+            result = false
+        } else if err, ok := r.(error); ok {
+            result = (target == nil) || errors.Is(err, target)
+        } else {
+            result = (target == nil)
+        }
+    }()
+    f()
+    return false
+}
 
 // Completes executes f (in a goroutine), and blocks until either f returns,
 // or the provided duration has elapsed. In the latter case, calls t.Errorf to

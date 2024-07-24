@@ -58,7 +58,7 @@ func IsStrictlyNegative[R Number](r R) bool {
 }
 
 // Abs returns (0 - r) for r < 0, or r for r >= 0.
-func Abs[R Signed](r R) R {
+func Abs[R Number](r R) R {
     if (r >= 0) { return r }
     return 0 - r
 }

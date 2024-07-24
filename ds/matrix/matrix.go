@@ -9,12 +9,11 @@
 package matrix
 
 import (
-    "github.com/tawesoft/golib/v2/ds/matrix/dimensions"
-)
+    "fmt"
 
-// Constructor is any function that returns a new matrix - e.g. the
-// return value from [NewGrid].
-type Constructor[T comparable] func() M[T]
+    "github.com/tawesoft/golib/v2/ds/matrix/dimensions"
+    "github.com/tawesoft/golib/v2/math/series"
+)
 
 // M is the interface implemented by a matrix of Values.
 type M[T comparable] interface {
@@ -44,17 +43,6 @@ type M[T comparable] interface {
 
     // Clear sets every element in the matrix to the zero value for type T.
     Clear()
-}
-
-// New sizes and returns a new element implementing the matrix interface M,
-// using the provided constructor e.g. [NewGrid].
-//
-// This is trivially equivalent to constructor(lengths...).
-//
-// In performance-sensitive code, the return value may be cast into the
-// concrete types e.g. [Grid].
-func New[T comparable](constructor Constructor[T]) M[T] {
-    return constructor()
 }
 
 // Copy clears dest and copies every value from src into dest at the same
@@ -108,33 +96,27 @@ type Grid[T comparable] struct {
     values []T
 }
 
-    // NewGrid returns a function that sizes and allocates a new grid matrix
-    // implementing [M].
-    func NewGrid[T comparable](lengths ... int) Constructor[T] {
-        return func() M[T] {
-            dims := dimensions.New(lengths...)
-            return Grid[T]{
-                D: dims,
-                values: make([]T, dims.Size()),
-            }
+    // NewGrid allocates and returns a new grid matrix implementing M.
+    func NewGrid[T comparable](lengths ... int) M[T] {
+        dims := dimensions.New(lengths...)
+        return Grid[T]{
+            D: dims,
+            values: make([]T, dims.Size()),
         }
     }
 
-    // NewSharedGrid returns a function that sizes a new [Grid] matrix
-    // implementing [M]. The grid uses the provided slice of values as its
-    // storage. Values is laid out in row-major order. This memory is shared:
-    // modifications to the values slice will modify the matrix, and
-    // modifications to the matrix will modify the values slice. The length of
-    // the values slice must be greater than or equal to the product of all
-    // lengths.
-    func NewSharedGrid[T comparable](lengths []int, values []T) Constructor[T] {
-        return func() M[T] {
-            dims := dimensions.New(lengths...)
-            if len(values) < dims.Size() { panic("shared grid buffer too small") }
-            return Grid[T]{
-                D: dims,
-                values: values,
-            }
+    // NewSharedGrid returns a new [Grid] matrix implementing M. The grid
+    // uses the provided slice of values as its storage. Values are laid out in
+    // row-major order. This memory is shared: modifications to the values
+    // slice will modify the matrix, and modifications to the matrix will
+    // modify the values slice. The length of the values slice must be greater
+    // than or equal to the product of all lengths.
+    func NewSharedGrid[T comparable](lengths []int, values []T) M[T] {
+        dims := dimensions.New(lengths...)
+        if len(values) < dims.Size() { panic("shared grid buffer too small") }
+        return Grid[T]{
+            D: dims,
+            values: values,
         }
     }
 
@@ -171,18 +153,16 @@ type Bool struct {
     buckets []uint64
 }
 
-    // NewBool is a [Constructor] of a [Bool] implementation of M.
-    func NewBool(lengths ... int) Constructor[bool] {
-        return func() M[bool] {
-            dims := dimensions.New(lengths...)
-            numBuckets := dims.Size() / 64
-            if dims.Size() % 64 != 0 {
-                numBuckets++
-            }
-            return Bool{
-                D: dims,
-                buckets: make([]uint64, numBuckets),
-            }
+    // NewBool allocates and returns a new [Bool] matrix implementing M.
+    func NewBool(lengths ... int) M[bool] {
+        dims := dimensions.New(lengths...)
+        numBuckets := dims.Size() / 64
+        if dims.Size() % 64 != 0 {
+            numBuckets++
+        }
+        return Bool{
+            D: dims,
+            buckets: make([]uint64, numBuckets),
         }
     }
 
@@ -244,18 +224,16 @@ type Bit struct {
     buckets []uint64
 }
 
-    // NewBit is a [Constructor] of a [Bit] implementation of M.
-    func NewBit(lengths ... int) Constructor[int] {
-        return func() M[int] {
-            dims := dimensions.New(lengths...)
-            numBuckets := dims.Size() / 64
-            if dims.Size() % 64 != 0 {
-                numBuckets++
-            }
-            return Bit{
-                D: dims,
-                buckets: make([]uint64, numBuckets),
-            }
+    // NewBit allocates and returns a [Bit] matrix implementing M.
+    func NewBit(lengths ... int) M[int] {
+        dims := dimensions.New(lengths...)
+        numBuckets := dims.Size() / 64
+        if dims.Size() % 64 != 0 {
+            numBuckets++
+        }
+        return Bit{
+            D: dims,
+            buckets: make([]uint64, numBuckets),
         }
     }
 
@@ -313,27 +291,22 @@ type Hashmap[T comparable] struct {
     values map[int]T
 }
 
-    // NewHashmap is a [Constructor] of a [Hashmap] implementation of M.
-    func NewHashmap[T comparable](lengths ... int) Constructor[T] {
-        return func() M[T] {
-            return Hashmap[T]{
-                D: dimensions.New(lengths...),
-                values: make(map[int]T),
-            }
+    // NewHashmap allocates and returns a [Hashmap] implementating M.
+    func NewHashmap[T comparable](lengths ... int) M[T] {
+        return Hashmap[T]{
+            D: dimensions.New(lengths...),
+            values: make(map[int]T),
         }
     }
 
-    // NewSharedHashmap returns a function that creates a new [Hashmap] matrix
-    // implementing [M]. The grid uses the provided map of values as its
-    // storage. This memory is shared: modifications to the values mapping will
-    // modify the matrix, and modifications to the matrix will modify the
-    // values map.
-    func NewSharedHashmap[T comparable](lengths []int, values map[int]T) Constructor[T] {
-        return func() M[T] {
-            return Hashmap[T]{
-                D: dimensions.New(lengths...),
-                values: values,
-            }
+    // NewSharedHashmap returns a new [Hashmap] matrix implementing [M].
+    // The matrix uses the provided map of values as its storage. This memory
+    // is shared: modifications to the values map will modify the matrix, and
+    // modifications to the matrix will modify the values map.
+    func NewSharedHashmap[T comparable](lengths []int, values map[int]T) M[T] {
+        return Hashmap[T]{
+            D: dimensions.New(lengths...),
+            values: values,
         }
     }
 
@@ -383,41 +356,37 @@ type Diagonal[T comparable] struct {
     values []T
 }
 
-    // NewDiagonal is a [Constructor] of a [Diagonal] implementation of M.
+    // NewDiagonal allocates and returns a [Diagonal] implementing M.
     //
     // Note the unique constructor: a Diagonal matrix is the same size along
     // each axis, and therefore the caller need only specify the dimensionality
     // and the length of one side.
-    func NewDiagonal[T comparable](dimensionality, length int) Constructor[T] {
-        return func() M[T] {
-            lengths := make([]int, dimensionality)
-            for i := 0; i < dimensionality; i++ {
-                lengths[i] = length
-            }
-            return Diagonal[T]{
-                D: dimensions.New(lengths...),
-                values: make([]T, length),
-            }
+    func NewDiagonal[T comparable](dimensionality, length int) M[T] {
+        lengths := make([]int, dimensionality)
+        for i := 0; i < dimensionality; i++ {
+            lengths[i] = length
+        }
+        return Diagonal[T]{
+            D: dimensions.New(lengths...),
+            values: make([]T, length),
         }
     }
 
-    // NewSharedDiagonal returns a function that sizes a new [Diagonal] matrix
-    // implementing [M]. The matrix uses the provided slice of values, which
-    // are the values along the diagonal only, as its storage. This memory is
-    // shared: modifications to the values slice will modify the matrix, and
-    // modifications to the matrix will modify the values slice. The length of
-    // the values slice sets the length of each side of the matrix.
-    func NewSharedDiagonal[T comparable](dimensionality int, values []T) Constructor[T] {
-        return func() M[T] {
-            length := len(values)
-            lengths := make([]int, dimensionality)
-            for i := 0; i < dimensionality; i++ {
-                lengths[i] = length
-            }
-            return Diagonal[T]{
-                D: dimensions.New(lengths...),
-                values: values,
-            }
+    // NewSharedDiagonal returns a new [Diagonal] matrix implementing M. The
+    // matrix uses the provided slice of values, which are the values along the
+    // diagonal only, as its storage. This memory is shared: modifications to
+    // the values slice will modify the matrix, and modifications to the matrix
+    // will modify the values slice. The length of the values slice sets the
+    // length of each side of the matrix.
+    func NewSharedDiagonal[T comparable](dimensionality int, values []T) M[T] {
+        length := len(values)
+        lengths := make([]int, dimensionality)
+        for i := 0; i < dimensionality; i++ {
+            lengths[i] = length
+        }
+        return Diagonal[T]{
+            D: dimensions.New(lengths...),
+            values: values,
         }
     }
 
@@ -425,13 +394,9 @@ type Diagonal[T comparable] struct {
     // the flat array of values on the diagonal, or -1 if not on the diagonal.
     func diagonalOffset(dimensionality int, length int, idx int) int {
         // the diagonal covers indexes 0, n, 2n, 3n, 4n ...
-        // where d := the dimensionality, x is the length,
+        // where d := the dimensionality, x is the length of one side,
         // n = x^0 + x^1 + x^2 + ... x^(d-1)
-        // TODO this could be even more efficient - doesn't actually need IEBS
-        n := 1 // x^0
-        for i := 2; i <= dimensionality; i++ {
-            n += integerExponentiationBySquaring(length, i-1)
-        }
+        n := series.NewGeometricInteger[int](1, length).Sum(dimensionality - 1)
         if idx % n != 0 {
             return -1
         }
@@ -442,30 +407,11 @@ type Diagonal[T comparable] struct {
         // the diagonal covers indexes 0, n, 2n, 3n, 4n ...
         // where d := the dimensionality, x is the length,
         // n = x^0 + x^1 + x^2 + ... x^(d-1)
-        n := 1 // x^0
-        for i := 2; i <= dimensionality; i++ {
-            n += integerExponentiationBySquaring(length, i-1)
-        }
+        n := series.NewGeometricInteger[int](1, length).Sum(dimensionality - 1)
         if idx % n != 0 {
             idx -= (idx % n)
         }
         return idx + n
-    }
-
-    // integerExponentiationBySquaring implements x^n for integers.
-    func integerExponentiationBySquaring(x, n int) int {
-        // https://en.wikipedia.org/wiki/Exponentiation_by_squaring
-        if n == 0 { return 1 }
-        y := 1
-        for n > 1 {
-            if n % 2 == 1 {
-                y = x * y
-                n = n - 1
-            }
-            x = x * x
-            n = n / 2
-        }
-        return x * y
     }
 
     func (m Diagonal[T]) Get(idx int) T {
@@ -502,4 +448,210 @@ type Diagonal[T comparable] struct {
 
     func (m Diagonal[T]) Clear() {
         clear(m.values)
+    }
+
+// View is an implementation of the matrix interface [M] that represents a
+// custom view of a parent matrix. The View presents its own dimensions and
+// element offsets and indexes, which are mapped appropriately to the parent
+// matrix.
+//
+// The underlying memory is shared, so that a modification to either the view
+// or the parent modifies the other.
+//
+// Clearing a view clears only the elements in the view that map to an element
+// in the parent.
+type View[T comparable] struct {
+    dimensions.D
+    parent  M[T]
+    mapping dimensions.Map
+}
+
+    // NewView returns a [View], implementing the matrix interface M, using the
+    // provided mapping.
+    func NewView[T comparable](parent M[T], mapping dimensions.Map) M[T] {
+        return View[T]{
+            D: mapping,
+            parent:  parent,
+            mapping: mapping,
+        }
+    }
+
+    func (v View[T]) Get(idx int) T {
+        return v.parent.Get(v.mapping.MapIndex(idx))
+    }
+
+    func (v View[T]) Set(idx int, value T) {
+        v.parent.Set(v.mapping.MapIndex(idx), value)
+    }
+
+    func (v View[T]) Next(idx int) (int, bool) {
+        var zero T
+        if idx < 0 { idx = -1 }
+        idx++
+        for i := idx; i < v.Size(); i++ {
+            if v.Get(i) != zero {
+                return i, true
+            }
+        }
+        return 0, false
+    }
+
+    func (v View[T]) Clear() {
+        var zero T
+        for idx, ok := -1, true; ok; idx, ok = v.Next(idx) {
+            if idx < 0 { continue }
+            v.Set(idx, zero)
+        }
+    }
+
+    // Region returns a [View], implementing the matrix interface M, by
+    // addressing a sub-region of a parent matrix. Coordinates in the
+    // sub-region can then be addressed starting at 0 in each dimension, even
+    // if they start at a non-zero offset in the parent.
+    //
+    // As with any [View], the underlying memory is shared.
+    //
+    // Note the unique constructor: a RegionView needs a starting point and
+    // an ending point, provided as indexes. Note that the ending point is
+    // inclusive.
+    func Region[T comparable](parent M[T], startIdx int, lengths ... int) M[T] {
+        return NewView[T](parent, dimensions.Crop(parent, startIdx, lengths...))
+    }
+
+    // Swizzle returns a [View], implementing the matrix interface M, that
+    // presents a view of a parent matrix, but is able to reorder, flip, or
+    // drop dimensions arbitrarily.
+    //
+    // As with any [View], the underlying memory is shared.
+    //
+    // The swizzle argument encodes how the dimensions are ordered, omitted, or
+    // flipped.
+    //
+    // The presence of a character '0' to '9' identifies dimensions 0 to 9 on
+    // the parent. As syntax sugar, the characters in the strings "xyzw",
+    // "rgba", and "stpq" are each respectively interchangeable with "0123".
+    //
+    // A dimension preceded by a negative sign flips or mirrors that
+    // dimension, so that instead of being read e.g. left to right, or top to
+    // bottom, it is instead read right to left, or bottom to top.
+    //
+    // Omitted dimensions are mapped to offset zero along that dimension in
+    // the parent. A dimension can be excluded and mapped to a constant offset
+    // by preceding it with an exclamation mark, in which case they are mapped
+    // to the next element in the optional "constants" argument. The constants
+    // argument is ordered by the left-to-right appearance of exclamation-mark
+    // exclusion rules in the string.
+    //
+    // ASCII whitespace is ignored. The syntax does not support input
+    // dimensions higher than '9', and no more than 16 output dimensions.
+    // May panic with [SwizzleSyntaxError].
+    //
+    // For example, given a 2D matrix, Swizzle(matrix, "yx") returns a view
+    // that rotates the matrix, turning it from row major order into column
+    // major order. Swizzle(matrix, "-x -y") returns a view that mirrors the
+    // matrix along both axes.
+    //
+    // For example, given a 3D matrix, Swizzle(matrix, "xy !z", 4) returns
+    // a 2D view of a slice of the matrix where z=4. Swizzle(matrix, "rrr")
+    // returns the grey-scale image encoded in the red channel.
+    func Swizzle[T comparable](parent M[T], swizzle string, constants ... int) M[T] {
+        dims := parent.Dimensionality()
+
+        // output[0:4]: parent dimension index
+        // output[5:6]: unused
+        // output[6]:   mirror ?
+        // output[7]:   constant ?
+        var outputs [16]uint8
+        const nothing = uint8(255)
+        precede := nothing
+        current := 0
+
+        for i := 0; i < len(swizzle); i++ {
+            idx := nothing
+            c := swizzle[i]
+
+            if c == '\t' || c == '\n' || c == ' ' { continue }
+            if ((c == '-') || (c == '!')) && precede == nothing {
+                precede = c
+            } else if c >= '0' && c <= '9' {
+                idx = c - '0'
+            } else {
+                switch c {
+                    case 'x': fallthrough
+                    case 'r': fallthrough
+                    case 's': idx = 0
+                    case 'y': fallthrough
+                    case 'g': fallthrough
+                    case 't': idx = 1
+                    case 'z': fallthrough
+                    case 'b': fallthrough
+                    case 'p': idx = 2
+                    case 'w': fallthrough
+                    case 'a': fallthrough
+                    case 'q': idx = 3
+                    default:
+                        panic(SwizzleSyntaxError{
+                            Offset:     i,
+                            Input:      swizzle,
+                            Unexpected: c,
+                        })
+                }
+            }
+            if idx == nothing { continue }
+            if int(idx) >= dims {
+                panic(SwizzleSyntaxError{
+                    Offset:     i,
+                    Input:      swizzle,
+                    Reason:     "input out of range",
+                })
+            }
+            if current >= 16 {
+                panic(SwizzleSyntaxError{
+                    Offset:     i,
+                    Input:      swizzle,
+                    Reason:     "too many outputs",
+                })
+            }
+
+            v := idx
+            if precede == '-' { v |= 0b01000000 }
+            if precede == '!' { v |= 0b10000000 }
+            outputs[current] = v
+            current++
+            precede = nothing
+        }
+
+        /*
+        TODO - lengths are easy, they are jsut the target dimension lengths
+
+        return NewView[T](parent, dimensions.Mapping{
+            Dimensions: func(target dimensions.D) dimensions.D {
+                return dimensions.New(lengths...)
+            },
+            Offsets: func(parentOffsets []int, parent dimensions.D, viewOffsets ... int) {
+                for i := 0; i < dims; i++ {
+                    parentOffsets[i] = startOffsets[i] + viewOffsets[i]
+                }
+            },
+        })
+        */
+
+        return parent // TODO
+    }
+
+    type SwizzleSyntaxError struct {
+        Offset int // byte offset
+        Input string
+        Unexpected uint8 // character
+        Reason string // if not unexpected
+    }
+
+    func (e SwizzleSyntaxError) Error() string {
+        if e.Unexpected != 0 {
+            return fmt.Sprintf("error parsing swizzle string %q: at byte offset %d: unexpected byte 0x%x",
+                e.Input, e.Offset, e.Unexpected)
+        } else {
+            return fmt.Sprintf("error parsing swizzle string %q: at byte offset %d: %s",
+                e.Input, e.Offset, e.Reason)
+        }
     }

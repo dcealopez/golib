@@ -19,9 +19,6 @@ support, are additionally covered by compatible [MIT-like licences](/LICENSE-PAR
 
 ## Packages
 
-**Note:** Additional v2/legacy packages exist for users migrating from
-`tawesoft.co.uk/go`. See [MIGRATIONS.md](/MIGRATIONS.md).
-
 **Note:** "Stable" packages have the
 [normal stability guarantees](https://go.dev/doc/modules/version-numbers)
 expected for a Go package of v2 or higher. "Latest"
@@ -30,16 +27,17 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 
 ### General Packages
 
-| Name                    |  Stable   |   Latest    | Description                                         |
-|:------------------------|:---------:|:-----------:|:----------------------------------------------------|
-| `dialog`                | [v2][d01] |      -      | cross-platform message boxes & file pickers         |
-| `iter`                  |     -     |  [v2][i01]  | composable lazy iteration                           |
-| `ks`                    |     -     |  [v2][k01]  | *(unstable)* "kitchen sink" of extras               |
-| `must`                  | [v2][m03] |      -      | assertions                                          |
-| `operator`              | [v2][o01] |      -      | operators as functions                              |
-| `tuple`                 | [v2][p01] |      -      | convert to/from tuples                              |
-| `view`                  | [v2][v01] |      -      | dynamic views over collections                      |
+| Name        |   Stable   |  Latest   | Description                                       |
+|:------------|:----------:|:---------:|:--------------------------------------------------|
+| `dialog`    | [v2][d01]  |     -     | cross-platform message boxes & file pickers       |
+| `iter`      |     -      | [v2][i01] | composable lazy iteration                         |
+| `ks`        |     -      | [v2][k01] | *(unstable)* "kitchen sink" of extras             |
+| `must`      | [v2][m03]  |     -     | assertions                                        |
+| `operator`  | [v2][o01]  |     -     | operators as functions                            |
+| `tuple`     | [v2][p01]  |     -     | convert to/from tuples                            |
+| `view`      | [v2][v01]  |     -     | dynamic views over collections                    |
 
+# TODO hyerlinks e.g. g01, g02, g03...
 
 ### Data-Structures
 
@@ -62,6 +60,12 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 | `fun/promise` |     -     | [v2][f05] | store computations to be performed later   |
 | `fun/result`  | [v2][f06] |     -     | "Result" type                              |
 | `fun/slices`  | [v2][f07] |     -     | higher-order functions for slices          |
+
+### Math Packages
+
+| Name      |  Stable   | Latest | Description                                       |
+|:----------|:---------:|:------:|:--------------------------------------------------|
+| `bitwise` | [v2][btx] |    -   | efficient operations on data up to a word in size |
 
 
 ### Text & Unicode Packages
@@ -88,7 +92,10 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 | `html/meta/twittercard` | [v2][h02] |     -     | HTML meta tags for Twitter Cards                    |
 
 
-### TODO
+### Legacy (TODO rewrites)
+
+**Note:** Additional v2/legacy packages exist for users migrating from
+`tawesoft.co.uk/go`. See [MIGRATIONS.md](/MIGRATIONS.md).
 
 | Name       | Stable |  Latest  | Description                                 |
 |:-----------|:------:|:--------:|:--------------------------------------------|
@@ -100,6 +107,7 @@ packages do not. See [MIGRATIONS.md](/MIGRATIONS.md).
 [css1]: https://www.w3.org/TR/css-syntax-3/
 [c01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/css/tokenizer
 [d01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/dialog
+[btx]: https://pkg.go.dev/github.com/tawesoft/golib/v2/bittricks
 [b01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/ds/bitseq
 [d02]: https://pkg.go.dev/github.com/tawesoft/golib/v2/ds/graph
 [g01]: https://pkg.go.dev/github.com/tawesoft/golib/v2/ds/genarray

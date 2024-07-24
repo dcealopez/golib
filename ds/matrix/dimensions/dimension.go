@@ -11,13 +11,34 @@ import (
 
 // TODO: various "swizzle"-style mappings
 
+func ascii(x int) int {
+    original := x
+    if x <= 64 { return x }
+    if x >= 'a' { x -= 32 } // to uppercase
+    switch x {
+        case 'X': return 0
+        case 'Y': return 1
+        case 'Z': return 2
+        case 'W': return 3
+
+        default: return original
+    }
+}
+
 // D is the interface implemented by an element that represents the
 // dimensionality (e.g. 2D, 3D, etc.) and size (in each axis, e.g. x, y, z) of
 // a matrix of values.
 //
 // It implements a bidirectional mapping from a single integer index to a
 // slice of offsets along each axis. The mapping assumes row-major order.
+//
+// In general, D is treated as immutable and may be copied, but, for the sake
+// of robustness, copies should be made using the Dimensions method.
 type D interface {
+    // Dimensions returns itself. If the implementation is heavy, it should
+    // return a new D constructed with [New].
+    Dimensions() D
+
     // Index computes an index calculated from the offsets along each axis.
     //
     // If any individual offset is out of bounds, it is wrapped round, modulo
@@ -49,7 +70,12 @@ type D interface {
     Dimensionality() int
 
     // Length returns the length along the specified zero-indexed axis. For
-    // example, Length(2) returns the depth in the third axis (z axis).
+    // example, Length(2) returns the depth in the third axis
+    // (z axis).
+    //
+    // As a special case, the value of the ASCII characters in each of the
+    // string "xyzw" may be used to refer to the dimensions 0, 1, 2 and 3,
+    // respectively. For example, Length('z') == Length(2). Case is ignored.
     //
     // The result is undefined if idx is less than zero. If idx is >=
     // Dimensionality, returns zero.
@@ -62,13 +88,19 @@ type D interface {
 
 var errZeroSize = errors.New("NewDimensions with zero-length size")
 var errZeroDims = errors.New("NewDimensions with empty sizes slice")
+var errLimitDims = errors.New("NewDimensions with more than 64 dimensions")
 
 // New returns a new element implementing the dimensions interface D.
 //
 // In performance-sensitive code, this may be cast into the concrete types
-// [D1], [D2], [D3], [D4], or [DN], for 1-, 2-, 3-, 4-, or >=5-dimensional
-// implementations, respectively.
+// [D1], [D2], [D3], [D4], for 1-, 2-, 3-, 4-dimensional implementations,
+// respectively.
+//
+// 5-dimensional and higher implementations are supported, but the concrete
+// type is not exposed. Zero dimensions, dimensions of size zero, and
+// dimensions higher than 64 are not supported and will panic.
 func New(sizes ... int) D {
+    if len(sizes) > 64 { panic(errLimitDims) }
     for i := 0; i < len(sizes); i++ {
         if sizes[i] == 0 { panic(errZeroSize) }
     }
@@ -78,7 +110,7 @@ func New(sizes ... int) D {
         case 2:  return D2([2]int{sizes[0], sizes[1]})
         case 3:  return D3([3]int{sizes[0], sizes[1], sizes[2]})
         case 4:  return D4([4]int{sizes[0], sizes[1], sizes[2], sizes[3]})
-        default: return DN(append([]int{}, sizes...)) // don't share memory
+        default: return dN(append([]int{}, sizes...)) // don't share memory
     }
 }
 
@@ -102,9 +134,10 @@ func dimensionsContains(dims []int, offsets []int) bool {
 type D1 [1]int
 
     func (r D1) Size() int                     { return r[0] }
+    func (r D1) Dimensions() D                 { return r }
     func (r D1) Dimensionality() int           { return 1 }
     func (r D1) Contains(offsets ... int) bool { return dimensionsContains(r[:], offsets) }
-    func (r D1) Length(idx int) int            { if idx < r.Dimensionality() { return r[idx] } else { return 0 } }
+    func (r D1) Length(idx int) int            { idx = ascii(idx); if idx < r.Dimensionality() { return r[idx] } else { return 0 } }
 
     func (r D1) Lengths(dest []int) {
         if len(dest) == 0 { return }
@@ -127,9 +160,10 @@ type D1 [1]int
 type D2 [2]int
 
     func (r D2) Size() int                     { return r[0] * r[1] }
+    func (r D2) Dimensions() D                 { return r }
     func (r D2) Dimensionality() int           { return 2 }
     func (r D2) Contains(offsets ... int) bool { return dimensionsContains(r[:], offsets) }
-    func (r D2) Length(idx int) int            { if idx < r.Dimensionality() { return r[idx] } else { return 0 } }
+    func (r D2) Length(idx int) int            { idx = ascii(idx); if idx < r.Dimensionality() { return r[idx] } else { return 0 } }
 
     func (r D2) Lengths(dest []int) {
         if len(dest) < r.Dimensionality() { copy(dest, r[:]) }
@@ -159,9 +193,10 @@ type D2 [2]int
 type D3 [3]int
 
     func (r D3) Size() int                     { return r[0] * r[1] * r[2] }
+    func (r D3) Dimensions() D                 { return r }
     func (r D3) Dimensionality() int           { return 3 }
     func (r D3) Contains(offsets ... int) bool { return dimensionsContains(r[:], offsets) }
-    func (r D3) Length(idx int) int            { if idx < r.Dimensionality() { return r[idx] } else { return 0 } }
+    func (r D3) Length(idx int) int            { idx = ascii(idx); if idx < r.Dimensionality() { return r[idx] } else { return 0 } }
 
     func (r D3) Lengths(dest []int) {
         if len(dest) < r.Dimensionality() { copy(dest, r[:]) }
@@ -197,9 +232,10 @@ type D3 [3]int
 type D4 [4]int // width, height, depth, extent
 
     func (r D4) Size() int                     { return r[0] * r[1] * r[2] * r[3] }
+    func (r D4) Dimensions() D                 { return r }
     func (r D4) Dimensionality() int           { return 4 }
     func (r D4) Contains(offsets ... int) bool { return dimensionsContains(r[:], offsets) }
-    func (r D4) Length(idx int) int            { if idx < r.Dimensionality() { return r[idx] } else { return 0 } }
+    func (r D4) Length(idx int) int            { idx = ascii(idx); if idx < r.Dimensionality() { return r[idx] } else { return 0 } }
 
     func (r D4) Lengths(dest []int) {
         if len(dest) < r.Dimensionality() { copy(dest, r[:]) }
@@ -235,16 +271,16 @@ type D4 [4]int // width, height, depth, extent
         dest[3] = u
     }
 
-// DN is an N-dimensional implementation of the [D] interface. In most cases,
-// this is initialised by calling [New] with 5 or more arguments. Performance
-// sensitive code may cast D to this type.
-type DN []int
+// dN is an N-dimensional implementation of the [D] interface. In most cases,
+// this is initialised by calling [New] with 5 or more arguments.
+type dN []int
 
-    func (r DN) Dimensionality() int           { return len(r) }
-    func (r DN) Contains(offsets ... int) bool { return dimensionsContains(r, offsets) }
-    func (r DN) Length(idx int) int            { if idx < r.Dimensionality() { return r[idx] } else { return 0 } }
+    func (r dN) Dimensions() D                 { return r } // immutable, so fine
+    func (r dN) Dimensionality() int           { return len(r) }
+    func (r dN) Contains(offsets ... int) bool { return dimensionsContains(r, offsets) }
+    func (r dN) Length(idx int) int            { idx = ascii(idx); if idx < r.Dimensionality() { return r[idx] } else { return 0 } }
 
-    func (r DN) Size() int {
+    func (r dN) Size() int {
         d := r.Dimensionality()
         total := 1
         for i := 0; i < d; i++ {
@@ -253,11 +289,11 @@ type DN []int
         return total
     }
 
-    func (r DN) Lengths(dest []int) {
+    func (r dN) Lengths(dest []int) {
         copy(dest, r)
     }
 
-    func (r DN) Index(offsets ... int) int {
+    func (r dN) Index(offsets ... int) int {
         d := r.Dimensionality()
         stride := 1
         total := 0
@@ -268,7 +304,7 @@ type DN []int
         return total
     }
 
-    func (r DN) Offsets(dest []int, idx int) {
+    func (r dN) Offsets(dest []int, idx int) {
         d := r.Dimensionality()
 
         dest[0] = idx % r[0]
