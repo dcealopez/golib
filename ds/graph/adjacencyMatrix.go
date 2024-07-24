@@ -21,7 +21,8 @@ type AdjacencyMatrix struct {
 // TODO implement transpose, undirected
 
 // NewAdjacencyMatrix returns an AdjacencyMatrix. Each vertex pair can only
-// have one edge. For a multigraph, use [NewMultiAdjacencyMatrix].
+// have one edge. For a multigraph, where vertex pairs can store a count of
+// multiple edges, use [NewMultiAdjacencyMatrix].
 func NewAdjacencyMatrix() AdjacencyMatrix {
     return AdjacencyMatrix{
         mat:   matrix.NewBit(4, 4),
@@ -29,8 +30,9 @@ func NewAdjacencyMatrix() AdjacencyMatrix {
     }
 }
 
-// NewAdjacencyMatrix returns an AdjacencyMatrix. Each vertex pair can have
-// a count of multiple edges. For a simple graph, use [NewAdjacencyMatrix].
+// NewMultiAdjacencyMatrix returns an AdjacencyMatrix. Each vertex pair can
+// have a count of multiple edges. For a simple graph, where each vertex pair
+// can have at most one edge, use [NewAdjacencyMatrix].
 func NewMultiAdjacencyMatrix() AdjacencyMatrix {
     return AdjacencyMatrix{
         mat:   matrix.NewGrid[int](4, 4),
@@ -38,7 +40,8 @@ func NewMultiAdjacencyMatrix() AdjacencyMatrix {
     }
 }
 
-// Matrix returns a pointer to the underlying [matrix.M] (of type int).
+// Matrix returns a pointer to the underlying [matrix.M] (of type int). Note
+// that if the matrix is resized, this value may become an old reference.
 func (m AdjacencyMatrix) Matrix() matrix.M[int] {
     return m.mat
 }
@@ -46,37 +49,30 @@ func (m AdjacencyMatrix) Matrix() matrix.M[int] {
 // Get returns the number of directed edges from a source vertex to a target
 // vertex (including self-loops, if any).
 func (m AdjacencyMatrix) Get(source, target VertexIndex) int {
-    if int(max(source, target)) > m.Width() { return 0 }
+    if int(max(source, target)) >= m.mat.Length('x') { return 0 }
     idx := m.mat.Index(int(source), int(target))
     return m.mat.Get(idx)
 }
 
 // Set stores the number of directed edges from a source vertex to a target
 // vertex (including self-loops, if any).
-func (m AdjacencyMatrix) Set(source, target VertexIndex, count int) {
+//
+// THe matrix is automatically resized, if necessary.
+func (m *AdjacencyMatrix) Set(source, target VertexIndex, count int) {
     largest := max(source, target)
-    m.Resize(int(largest))
+    m.Resize(int(largest) + 1)
     idx := m.mat.Index(int(source), int(target))
     m.mat.Set(idx, count)
 }
 
-// Width returns the width of the adjacency matrix. Note that if VertexIndexes
-// are sparsely distributed, width may be greater the number of vertexes
-// produced by iteration.
-func (m AdjacencyMatrix) Width() int {
-    return m.mat.Length(0)
-}
-
 // CountEdges returns the total number of edges in the adjacency matrix.
 func (m AdjacencyMatrix) CountEdges() int {
+    // walk the matrix sparsely
     sum := 0
-
-    // optimisation: walk the matrix sparsely
     for idx, ok := -1, true; ok; idx, ok = m.mat.Next(idx) {
         if idx < 0 { continue }
         sum += m.mat.Get(idx)
     }
-
     return sum
 }
 
@@ -86,19 +82,16 @@ func (m AdjacencyMatrix) Clear() {
 
 // Resize updates the adjacency matrix, if necessary, so that it has at least
 // capacity for width elements in each dimension.
-func (m AdjacencyMatrix) Resize(width int) {
-    if m.Width() <= width { return }
+func (m *AdjacencyMatrix) Resize(width int) {
+    if m.mat.Length('x') > width { return }
     width = int(integer.AlignPowTwo(uint(width)))
 
-    // TODO move this into matrix itself
-
-    var mcons matrix.M[int]
+    var dest matrix.M[int]
     if m.multi {
-        mcons = matrix.NewGrid[int](width, width)
+        dest = matrix.NewGrid[int](width, width)
     } else {
-        mcons = matrix.NewBit[int](width, width)
+        dest = matrix.NewBit(width, width)
     }
-    dest := mcons
     matrix.Copy(dest, m.mat)
     m.mat = dest
 }
@@ -110,7 +103,7 @@ func (m AdjacencyMatrix) Resize(width int) {
 // constant time.
 func (m AdjacencyMatrix) Indegree(target VertexIndex) int {
     var sum = 0
-    for i := 0; i < m.Width(); i++ {
+    for i := 0; i < m.mat.Length('x'); i++ {
         idx := m.mat.Index(i, int(target))
         sum += m.mat.Get(idx)
     }
@@ -124,7 +117,7 @@ func (m AdjacencyMatrix) Indegree(target VertexIndex) int {
 // constant time.
 func (m AdjacencyMatrix) Outdegree(source VertexIndex) int {
     var sum = 0
-    for i := 0; i < m.Width(); i++ {
+    for i := 0; i < m.mat.Length('x'); i++ {
         idx := m.mat.Index(int(source), i)
         sum += m.mat.Get(idx)
     }
@@ -140,10 +133,10 @@ func (m AdjacencyMatrix) Degree(source VertexIndex) int {
     return m.Indegree(source) + m.Outdegree(source)
 }
 
-// Vertexes implements the graph [Iterator] Vertexes method. Every vertex will
-// have at least one edge (in either direction).
+// Vertexes implements the graph [Iterator] Vertexes method. An AdjacencyMatrix
+// is a graph of every vertex that has at least one edge (in either direction).
 func (m AdjacencyMatrix) Vertexes() func() (VertexIndex, bool) {
-    i, width := 0, m.Width()
+    i, width := 0, m.mat.Length('x')
     return func() (_ VertexIndex, _ bool) {
         for {
             if i >= width { return }
@@ -157,7 +150,7 @@ func (m AdjacencyMatrix) Vertexes() func() (VertexIndex, bool) {
 
 // Edges implements the graph [Iterator] Edges method.
 func (m AdjacencyMatrix) Edges(source VertexIndex) func() (VertexIndex, int, bool) {
-    i, width := 0, m.Width()
+    i, width := 0 ,m.mat.Length('x')
     return func() (_ VertexIndex, _ int, _ bool) {
         for {
             if i >= width { return }
@@ -186,7 +179,7 @@ func (m AdjacencyMatrix) Weight(source, target VertexIndex) Weight {
 // Each vertex index in the adjacency matrix corresponds to a matching index
 // in graph g. Once an adjacency matrix has been constructed, it is not
 // affected by future changes to graph g.
-func (m AdjacencyMatrix) Calculate(g Iterator) {
+func (m *AdjacencyMatrix) Calculate(g Iterator) {
     width := int(vertexIndexLimit(g.Vertexes))
     m.Resize(width)
     m.Clear()

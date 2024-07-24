@@ -10,7 +10,7 @@ import (
 type TestGraph struct {
     // mapping maps Source Vertices to a Set of Target Vertices with a
     // given weight.
-    mapping map[graph.VertexIndex](map[graph.VertexIndex]int)
+    mapping map[graph.VertexIndex](map[graph.VertexIndex]graph.Weight)
     // values maps vertexes to a string
     values map[graph.VertexIndex]string
     count int
@@ -18,7 +18,7 @@ type TestGraph struct {
 
 func NewTestGraph() *TestGraph {
     return &TestGraph{
-        mapping: make(map[graph.VertexIndex](map[graph.VertexIndex]int)),
+        mapping: make(map[graph.VertexIndex](map[graph.VertexIndex]graph.Weight)),
         values:  make(map[graph.VertexIndex]string),
         count:   0,
     }
@@ -43,15 +43,15 @@ func (g *TestGraph) Vertex(s string) graph.VertexIndex {
     value := graph.VertexIndex(g.count)
     g.count++
     g.values[value]  = s
-    g.mapping[value] = make(map[graph.VertexIndex]int)
+    g.mapping[value] = make(map[graph.VertexIndex]graph.Weight)
     return value
 }
 
-func (g *TestGraph) Edge(from, to graph.VertexIndex, weight int) {
+func (g *TestGraph) Edge(from, to graph.VertexIndex, weight graph.Weight) {
     g.mapping[from][to] = weight
 }
 
-func (g *TestGraph) Weight(from, to graph.VertexIndex) int {
+func (g *TestGraph) Weight(from, to graph.VertexIndex) graph.Weight {
     return g.mapping[from][to]
 }
 
@@ -98,7 +98,7 @@ func TestBfsTree_CalculateUnweighted(t *testing.T) {
     type row struct{
         vertex      graph.VertexIndex
         predecessor graph.VertexIndex
-        distance    int
+        distance    graph.Weight
         reachable   bool
     }
     stat := func(v graph.VertexIndex) row {

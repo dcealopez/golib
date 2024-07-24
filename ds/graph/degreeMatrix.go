@@ -1,5 +1,10 @@
 package graph
 
+import (
+    "github.com/tawesoft/golib/v2/ds/matrix"
+    "github.com/tawesoft/golib/v2/math/integer"
+)
+
 // DegreeMatrix represents the number of edges on a vertex (to or from any
 // other vertex in aggregate). This may be the in-, out-, or undirected-,
 // degree.
@@ -9,50 +14,54 @@ package graph
 // Values are indexed by [VertexIndex]. A DegreeMatrix is a diagonal-matrix;
 // values off the diagonal are zero.
 type DegreeMatrix struct {
-    mat matrix2.Interface[int]
+    mat matrix.M[int]
 }
 
 // NewDegreeMatrix returns a new degree matrix of undefined size.
 func NewDegreeMatrix() DegreeMatrix {
     return DegreeMatrix{
-        mat: matrix2.New2D[int](matrix2.NewDiagonal[int], 0, 0),
+        mat: matrix.NewDiagonal[int](2, 4),
     }
 }
 
-// Matrix returns a pointer to the underlying [matrix.Interface] (of type int).
-func (m DegreeMatrix) Matrix() matrix2.Interface[int] {
+// Matrix returns a pointer to the underlying [matrix.M] (of type int).
+func (m DegreeMatrix) Matrix() matrix.M[int] {
     return m.mat
 }
 
 // Get returns the (in-, out-, or undirected) degree of the given vertex.
 func (m DegreeMatrix) Get(source VertexIndex) int {
-    if int(source) > m.mat.Width() { return 0 }
-    return m.mat.Get2D(int(source), int(source))
+    if int(source) >= m.mat.Length('x') { return 0 }
+    idx := m.mat.Index(int(source), int(source))
+    return m.mat.Get(idx)
 }
 
 // Set stores the (in-, out-, or undirected) degree of the given vertex.
-func (m DegreeMatrix) Set(source VertexIndex, count int) {
-    m.mat.Set2D(count, int(source), int(source))
+func (m *DegreeMatrix) Set(source VertexIndex, count int) {
+    m.Resize(int(source) + 1)
+    idx := m.mat.Index(int(source), int(source))
+    m.mat.Set(idx, count)
 }
 
-// Width returns the width of the degree matrix. Note that if VertexIndexes
-// are sparsely distributed, width may be greater the number of vertexes
-// produced by iteration.
-func (m DegreeMatrix) Width() int {
-    return m.mat.Width()
+// Resize updates the degree matrix, if necessary, so that it has at least
+// capacity for width elements in each dimension.
+func (m *DegreeMatrix) Resize(width int) {
+    if m.mat.Length('x') > width { return }
+    width = int(integer.AlignPowTwo(uint(width)))
+    dest := matrix.NewDiagonal[int](2, width)
+    matrix.Copy(dest, m.mat)
+    m.mat = dest
 }
 
 // CountEdges returns the total number of edges in the degree matrix.
 func (m DegreeMatrix) CountEdges() int {
-    return matrix2.Reduce(m.mat, 0, func(a, b int) int { return a + b })
-}
-
-// Resize updates the degree matrix, if necessary, so that it has at least
-// capacity for width elements in each dimension. It reuses underlying memory
-// from the existing matrix where possible. Note that this will clear the
-// matrix.
-func (m DegreeMatrix) Resize(width int) {
-    m.mat.Resize2D(width, width)
+    // walk the matrix sparsely
+    sum := 0
+    for idx, ok := -1, true; ok; idx, ok = m.mat.Next(idx) {
+        if idx < 0 { continue }
+        sum += m.mat.Get(idx)
+    }
+    return sum
 }
 
 func (m DegreeMatrix) Clear() {
@@ -69,7 +78,7 @@ func (m DegreeMatrix) Clear() {
 // Each vertex index in the degree matrix corresponds to the matching index
 // in the input graph g. Once a degree matrix has been constructed, it is not
 // affected by future changes to g.
-func (m DegreeMatrix) Calculate(g func() VertexIterator, degree func(index VertexIndex) int) {
+func (m *DegreeMatrix) Calculate(g func() VertexIterator, degree func(index VertexIndex) int) {
     width := int(vertexIndexLimit(g))
     m.Resize(width)
     m.Clear()

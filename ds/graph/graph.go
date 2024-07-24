@@ -88,6 +88,9 @@ type Iterator interface {
 // Incremental is an interface for any dynamic graph implementation or online
 // algorithm that can efficiently update to give a useful result if a graph
 // changes by the addition of a vertex or edge, or if an edge weight decreases.
+//
+// Multiple related graph representations can be kept in-sync with
+// [TeeIncremental].
 type Incremental interface {
     AddVertex(VertexIndex)
     AddEdge(source VertexIndex, target VertexIndex)

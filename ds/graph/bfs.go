@@ -1,11 +1,12 @@
 package graph
 
 import (
+    "math"
+
     "github.com/tawesoft/golib/v2/ks"
-    "github.com/tawesoft/golib/v2/operator/checked"
 )
 
-type vertexBFS[W Weight] struct {
+type vertexBFS struct {
     // predecessor is the vertex immediately previous to this one along one
     // possible shortest path. Unreachable and root verticies have this
     // set to -1.
@@ -19,7 +20,7 @@ type vertexBFS[W Weight] struct {
     // graph, or a graph where every edge has unit weight, this is the same
     // cumulative number of edges travelled from source to the destination
     // along the shortest path.
-    distance W
+    distance Weight
 }
 
 // BfsTree represents a (unweighted) breadth-first tree of the reachable
@@ -27,23 +28,17 @@ type vertexBFS[W Weight] struct {
 //
 // A BfsTree is itself a graph (the predecessor subgraph of the graph it
 // was constructed from), and implements the [Iterator] interface.
-type BfsTree[W Weight] struct {
-    vertexes []vertexBFS[W]
+type BfsTree struct {
+    vertexes []vertexBFS
     start    VertexIndex
     queue    []VertexIndex
 }
 
 // NewBfsTree returns a new (empty) breadth-first search tree object for
-// storing results. Distances are typed as integers.
-func NewBfsTree() *BfsTree[int] {
-    return NewWeightedBfsTree[int]()
-}
-
-// NewWeightedBfsTree returns a new (empty) breadth-first search tree object
-// for storing results, with a specified Weight type.
-func NewWeightedBfsTree[W Weight]() *BfsTree[W] {
-    return &BfsTree[W]{
-        vertexes: make([]vertexBFS[W], 0),
+// storing results.
+func NewBfsTree() *BfsTree {
+    return &BfsTree{
+        vertexes: make([]vertexBFS, 0),
         queue:    make([]VertexIndex, 0),
     }
 }
@@ -51,12 +46,12 @@ func NewWeightedBfsTree[W Weight]() *BfsTree[W] {
 // Resize updates the BfsTree, if necessary, so that it has at least capacity
 // for n vertexes. It reuses underlying memory from the existing tree where
 // possible. Note that this will clear the tree.
-func (t *BfsTree[W]) Resize(n int) {
+func (t *BfsTree) Resize(n int) {
     t.vertexes = ks.SetLength(t.vertexes, n)
 }
 
-func (t *BfsTree[W]) Clear() {
-    maximum := checked.GetLimits[W]().Max
+func (t *BfsTree) Clear() {
+    maximum := Weight(math.MaxInt)
     t.start = 0
     clear(t.vertexes)
     clear(t.queue)
@@ -70,7 +65,7 @@ func (t *BfsTree[W]) Clear() {
 
 // Reachable returns true if the given vertex is reachable from the root of
 // the BfsTree.
-func (t BfsTree[W]) Reachable(vertex VertexIndex) bool {
+func (t BfsTree) Reachable(vertex VertexIndex) bool {
     if (vertex < 0) || (int(vertex) >= len(t.vertexes)) { return false }
     // Every reachable vertexBFS has a predecessor, except the root.
     return (t.vertexes[vertex].predecessor >= 0) || (vertex == t.start)
@@ -80,7 +75,7 @@ func (t BfsTree[W]) Reachable(vertex VertexIndex) bool {
 // Predecessor returns the predecessor of the vertex in the search tree.
 // If the vertex is not reachable, or if the vertex is the search start
 // vertex, the boolean return value is false.
-func (t BfsTree[W]) Predecessor(vertex VertexIndex) (VertexIndex, bool) {
+func (t BfsTree) Predecessor(vertex VertexIndex) (VertexIndex, bool) {
     if !t.Reachable(vertex) { return 0, false }
     predecessor := t.vertexes[vertex].predecessor
     if predecessor < 0 { return 0, false }
@@ -90,13 +85,13 @@ func (t BfsTree[W]) Predecessor(vertex VertexIndex) (VertexIndex, bool) {
 // Distance returns the cumulative number of edges crossed from the search
 // start vertex to the given target. If the vertex is not reachable, the
 // boolean return value is false.
-func (t BfsTree[W]) Distance(vertex VertexIndex) (W, bool) {
+func (t BfsTree) Distance(vertex VertexIndex) (Weight, bool) {
     if !t.Reachable(vertex) { return 0, false }
     return t.vertexes[vertex].distance, true
 }
 
 // Vertexes implements the graph [Iterator] Vertexes method.
-func (t BfsTree[W]) Vertexes() VertexIterator {
+func (t BfsTree) Vertexes() VertexIterator {
     i, width := 0, len(t.vertexes)
     return func() (_ VertexIndex, _ bool) {
         for {
@@ -113,7 +108,7 @@ func (t BfsTree[W]) Vertexes() VertexIterator {
 //
 // Each vertex has exactly one directed edge, to its predecessor, except the
 // root vertex, which has none.
-func (t BfsTree[W]) Edges(source VertexIndex) EdgeIterator {
+func (t BfsTree) Edges(source VertexIndex) EdgeIterator {
     return func() (_ VertexIndex, _ int, _ bool) {
         target, ok := t.Predecessor(source)
         if (!ok) { return }
@@ -132,7 +127,7 @@ func (t BfsTree[W]) Edges(source VertexIndex) EdgeIterator {
 // There may be many possible breadth-first trees of an input graph. This
 // procedure always visits vertexes in the order given by a graph's
 // [EdgeIterator].
-func (t *BfsTree[W]) CalculateUnweighted(graph Iterator, start VertexIndex) {
+func (t *BfsTree) CalculateUnweighted(graph Iterator, start VertexIndex) {
     t.Resize(int(vertexIndexLimit(graph.Vertexes)))
     t.Clear()
 
@@ -178,15 +173,15 @@ func (t *BfsTree[W]) CalculateUnweighted(graph Iterator, start VertexIndex) {
 // There may be many possible breadth-first trees of an input graph. The order
 // taken by this procedure, when two paths have the same weight, is arbitrary
 // and subject to change.
-func (t *BfsTree[W]) CalculateWeightedGeneral(
+func (t *BfsTree) CalculateWeightedGeneral(
     graph Iterator,
     start VertexIndex,
-    weight WeightFunc[W],
+    weight WeightFunc,
 ) {
     // Bellman-Ford algorithm
 
     limit := int(vertexIndexLimit(graph.Vertexes))
-    maxDistance := checked.GetLimits[W]().Max
+    maxDistance := Weight(math.MaxInt)
     t.Resize(limit)
     t.Clear()
 

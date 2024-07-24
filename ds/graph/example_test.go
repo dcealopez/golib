@@ -109,7 +109,7 @@ func Example_solarSystem() {
     d.AddOrbit(mars,          phobos,                      6_000)
 
     // construct an adjacency matrix for efficient adjacency lookup
-    orbitMatrix := graph.NewAdjacencyMatrix(nil)
+    orbitMatrix := graph.NewAdjacencyMatrix()
     orbitMatrix.Calculate(d)
 
     // construct degree matrices for efficient in-/out- degree lookup

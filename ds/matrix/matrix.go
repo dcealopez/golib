@@ -9,8 +9,6 @@
 package matrix
 
 import (
-    "fmt"
-
     "github.com/tawesoft/golib/v2/ds/matrix/dimensions"
     "github.com/tawesoft/golib/v2/math/series"
 )
@@ -468,9 +466,12 @@ type View[T comparable] struct {
 
     // NewView returns a [View], implementing the matrix interface M, using the
     // provided mapping.
+    //
+    // See [dimensions.Crop] and the Bind method on [dimensions.Sampler] for
+    // constructing maps from a parent.
     func NewView[T comparable](parent M[T], mapping dimensions.Map) M[T] {
         return View[T]{
-            D: mapping,
+            D: mapping.Dimensions(),
             parent:  parent,
             mapping: mapping,
         }
@@ -504,154 +505,16 @@ type View[T comparable] struct {
         }
     }
 
-    // Region returns a [View], implementing the matrix interface M, by
-    // addressing a sub-region of a parent matrix. Coordinates in the
-    // sub-region can then be addressed starting at 0 in each dimension, even
-    // if they start at a non-zero offset in the parent.
+    // Crop is a shortcut for NewView(parent, dimensions.Crop(...))
     //
-    // As with any [View], the underlying memory is shared.
-    //
-    // Note the unique constructor: a RegionView needs a starting point and
-    // an ending point, provided as indexes. Note that the ending point is
-    // inclusive.
-    func Region[T comparable](parent M[T], startIdx int, lengths ... int) M[T] {
+    // See [dimensions.Crop].
+    func Crop[T comparable](parent M[T], startIdx int, lengths ... int) M[T] {
         return NewView[T](parent, dimensions.Crop(parent, startIdx, lengths...))
     }
 
-    // Swizzle returns a [View], implementing the matrix interface M, that
-    // presents a view of a parent matrix, but is able to reorder, flip, or
-    // drop dimensions arbitrarily.
+    // Sample is a shortcut for NewView(parent, dimensions.Sampler(...).Bind(parent)).
     //
-    // As with any [View], the underlying memory is shared.
-    //
-    // The swizzle argument encodes how the dimensions are ordered, omitted, or
-    // flipped.
-    //
-    // The presence of a character '0' to '9' identifies dimensions 0 to 9 on
-    // the parent. As syntax sugar, the characters in the strings "xyzw",
-    // "rgba", and "stpq" are each respectively interchangeable with "0123".
-    //
-    // A dimension preceded by a negative sign flips or mirrors that
-    // dimension, so that instead of being read e.g. left to right, or top to
-    // bottom, it is instead read right to left, or bottom to top.
-    //
-    // Omitted dimensions are mapped to offset zero along that dimension in
-    // the parent. A dimension can be excluded and mapped to a constant offset
-    // by preceding it with an exclamation mark, in which case they are mapped
-    // to the next element in the optional "constants" argument. The constants
-    // argument is ordered by the left-to-right appearance of exclamation-mark
-    // exclusion rules in the string.
-    //
-    // ASCII whitespace is ignored. The syntax does not support input
-    // dimensions higher than '9', and no more than 16 output dimensions.
-    // May panic with [SwizzleSyntaxError].
-    //
-    // For example, given a 2D matrix, Swizzle(matrix, "yx") returns a view
-    // that rotates the matrix, turning it from row major order into column
-    // major order. Swizzle(matrix, "-x -y") returns a view that mirrors the
-    // matrix along both axes.
-    //
-    // For example, given a 3D matrix, Swizzle(matrix, "xy !z", 4) returns
-    // a 2D view of a slice of the matrix where z=4. Swizzle(matrix, "rrr")
-    // returns the grey-scale image encoded in the red channel.
-    func Swizzle[T comparable](parent M[T], swizzle string, constants ... int) M[T] {
-        dims := parent.Dimensionality()
-
-        // output[0:4]: parent dimension index
-        // output[5:6]: unused
-        // output[6]:   mirror ?
-        // output[7]:   constant ?
-        var outputs [16]uint8
-        const nothing = uint8(255)
-        precede := nothing
-        current := 0
-
-        for i := 0; i < len(swizzle); i++ {
-            idx := nothing
-            c := swizzle[i]
-
-            if c == '\t' || c == '\n' || c == ' ' { continue }
-            if ((c == '-') || (c == '!')) && precede == nothing {
-                precede = c
-            } else if c >= '0' && c <= '9' {
-                idx = c - '0'
-            } else {
-                switch c {
-                    case 'x': fallthrough
-                    case 'r': fallthrough
-                    case 's': idx = 0
-                    case 'y': fallthrough
-                    case 'g': fallthrough
-                    case 't': idx = 1
-                    case 'z': fallthrough
-                    case 'b': fallthrough
-                    case 'p': idx = 2
-                    case 'w': fallthrough
-                    case 'a': fallthrough
-                    case 'q': idx = 3
-                    default:
-                        panic(SwizzleSyntaxError{
-                            Offset:     i,
-                            Input:      swizzle,
-                            Unexpected: c,
-                        })
-                }
-            }
-            if idx == nothing { continue }
-            if int(idx) >= dims {
-                panic(SwizzleSyntaxError{
-                    Offset:     i,
-                    Input:      swizzle,
-                    Reason:     "input out of range",
-                })
-            }
-            if current >= 16 {
-                panic(SwizzleSyntaxError{
-                    Offset:     i,
-                    Input:      swizzle,
-                    Reason:     "too many outputs",
-                })
-            }
-
-            v := idx
-            if precede == '-' { v |= 0b01000000 }
-            if precede == '!' { v |= 0b10000000 }
-            outputs[current] = v
-            current++
-            precede = nothing
-        }
-
-        /*
-        TODO - lengths are easy, they are jsut the target dimension lengths
-
-        return NewView[T](parent, dimensions.Mapping{
-            Dimensions: func(target dimensions.D) dimensions.D {
-                return dimensions.New(lengths...)
-            },
-            Offsets: func(parentOffsets []int, parent dimensions.D, viewOffsets ... int) {
-                for i := 0; i < dims; i++ {
-                    parentOffsets[i] = startOffsets[i] + viewOffsets[i]
-                }
-            },
-        })
-        */
-
-        return parent // TODO
-    }
-
-    type SwizzleSyntaxError struct {
-        Offset int // byte offset
-        Input string
-        Unexpected uint8 // character
-        Reason string // if not unexpected
-    }
-
-    func (e SwizzleSyntaxError) Error() string {
-        if e.Unexpected != 0 {
-            return fmt.Sprintf("error parsing swizzle string %q: at byte offset %d: unexpected byte 0x%x",
-                e.Input, e.Offset, e.Unexpected)
-        } else {
-            return fmt.Sprintf("error parsing swizzle string %q: at byte offset %d: %s",
-                e.Input, e.Offset, e.Reason)
-        }
+    // See [dimensions.Sampler].
+    func Sample[T comparable](parent M[T], sampler string, constants ... int) M[T] {
+        return NewView[T](parent, dimensions.Sampler(sampler, constants...).Bind(parent))
     }

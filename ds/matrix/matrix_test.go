@@ -101,14 +101,26 @@ func TestM_Next(t *testing.T) {
         },
         {
             "view 1",
-            matrix.Region[int](matrix.NewSharedGrid([]int{4, 4}, []int{
+            matrix.Crop(matrix.NewSharedGrid([]int{4, 4}, []int{
                 0, 0, 1, 0,
                 2, 3, 4, 5,
                 6, 0, 0, 0,
                 0, 0, 0, 1,
-            }), 5, 3, 2),
+            }), 5, 3, 2), // crops a 3x2 box starting at (1,1)==idx(5)
             []int{0, 1, 2},
             []int{3, 4, 5},
+            nil,
+        },
+        {
+            "view 2",
+            matrix.Sample(matrix.NewSharedGrid([]int{4, 4}, []int{
+                0, 0, 1, 0,
+                2, 3, 4, 5,
+                6, 0, 0, 0,
+                0, 0, 0, 1,
+            }), "y !x", 1), // column at index 1: []int{0, 3, 0, 0}
+            []int{1},
+            []int{3},
             nil,
         },
     }
